@@ -33,7 +33,15 @@ function readPassphrase() {
   console.error('  環境変数 BUNKO_PASS を設定してから再実行してください。\n');
   process.exit(1);
 }
-const normalizePass = (s) => String(s).normalize('NFKC').replace(/\s+/g, '').toLowerCase();
+/* 合言葉のゆらぎ吸収。reader.js の同名関数と必ず同じ結果にすること（違うと解錠できない）。
+   会場でスマホから打つ前提なので、打ち間違えやすいものは最初から無視する:
+   ・全角/半角、大文字/小文字
+   ・空白
+   ・ハイフン類と長音符「ー」（日本語キーボードだと - の代わりに ー を打つ人が多い）
+   ・アンダーバー、中黒 */
+const PASS_IGNORE = /[\s\-‐-―−ー_・]/g;
+const normalizePass = (s) =>
+  String(s).normalize('NFKC').replace(PASS_IGNORE, '').toLowerCase();
 
 /* ---------- 暗号化 ---------- */
 async function encrypt(plaintext, pass) {

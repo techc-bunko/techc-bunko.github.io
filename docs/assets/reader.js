@@ -21,8 +21,10 @@
     for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
     return out;
   }
+  /* build.js の normalizePass と必ず同じ結果にすること（違うと正しい合言葉でも解錠できない）。
+     全角/半角・大文字小文字・空白・ハイフン類・長音符「ー」・アンダーバー・中黒を無視する。 */
   function normalizePass(s) {
-    return String(s).normalize('NFKC').replace(/\s+/g, '').toLowerCase();
+    return String(s).normalize('NFKC').replace(/[\s\-‐-―−ー_・]/g, '').toLowerCase();
   }
 
   /* ---------- 表示設定（文字サイズ・テーマ・言語） ---------- */
