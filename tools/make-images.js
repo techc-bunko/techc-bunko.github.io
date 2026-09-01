@@ -76,26 +76,49 @@ window.__BUNKO_GEN = (function () {
     ctx.fillStyle = RULE; ctx.fillRect(18, 0, W - 18, 1); ctx.fillRect(18, H - 1, W - 18, 1);
 
     // 右側に大きく縦書きの題名
-    // 題名の長さに合わせて自動で縮める（縦にはみ出さないように）
-    // 「(1)」のような欧字の連続は縦中横で1マスに収まるので、1文字として数える
+    // 題名の長さに合わせて自動で縮める（縦にはみ出さないように）。
+    // 「(1)」のような欧字の連続は縦中横で1マスに収まるので、1文字として数える。
+    // 長い題名は1列だと極端に小さくなるので、縦書きの本と同じように2列に折る。
     var units = o.title.replace(/[A-Za-z0-9()（）]{1,4}/g, 'X').length;
-    var titleSize = Math.min(94, Math.floor((H - 150) / (units * 1.28)));
+    var cols = units > 11 ? 2 : 1;
+    var perCol = Math.ceil(units / cols);
+    var titleSize = Math.min(94, Math.floor((H - 150) / (perCol * 1.28)));
     var gap = titleSize * 0.28;
-    var total = units * (titleSize + gap);
+    var total = perCol * (titleSize + gap);
     var top = Math.max(58, (H - total) / 2 - 8);
+
+    // 2列のときは、原稿の文字数どおりに切って右の列から流す
+    var parts = [];
+    if (cols === 1) {
+      parts = [o.title];
+    } else {
+      // 縦中横のまとまりを壊さないよう、行に分けるときも欧字連続を1マスとして数える
+      var cells = [], i2 = 0;
+      while (i2 < o.title.length) {
+        var mm = /^[A-Za-z0-9()（）]{1,4}/.exec(o.title.slice(i2));
+        var cell = mm ? mm[0] : o.title[i2];
+        cells.push(cell); i2 += cell.length;
+      }
+      parts = [cells.slice(0, perCol).join(''), cells.slice(perCol).join('')];
+    }
+
     ctx.fillStyle = INK;
-    vtext(ctx, o.title, W - 150, top, titleSize, gap);
+    var colGap = titleSize * 1.45;
+    parts.forEach(function (part, ci) {
+      ctx.fillStyle = INK;
+      vtext(ctx, part, W - 150 - ci * colGap, top, titleSize, gap);
+    });
 
     // 題名の左に細い縦罫
     ctx.fillStyle = o.accent;
-    ctx.fillRect(W - 150 - titleSize * 0.95, top, 2, Math.min(total, H - top - 60));
+    ctx.fillRect(W - 150 - (cols - 1) * colGap - titleSize * 0.95, top, 2, Math.min(total, H - top - 60));
 
     // 帯文（縦書き・小さめ）
     if (o.tagline) {
       ctx.fillStyle = o.accentDark;
       var ts = Math.min(29, Math.floor((H - 210) / (o.tagline.length * 1.34)));
       var tg = ts * 0.34;
-      vtext(ctx, o.tagline, W - 150 - titleSize * 1.7, top + 10, ts, tg);
+      vtext(ctx, o.tagline, W - 150 - (cols - 1) * colGap - titleSize * 1.7, top + 10, ts, tg);
     }
 
     // 左：文庫のブランドブロック（上下の真ん中あたりに置いて余白を締める）
@@ -129,8 +152,30 @@ window.__BUNKO_GEN = (function () {
     htext(ctx, o.tagline, W / 2, 428, '400 34px ' + MIN, SOFT, '8px', 'center');
 
     ctx.fillStyle = RULE; ctx.fillRect(W / 2 - 40, 478, 80, 1);
-    htext(ctx, o.works, W / 2, 528, '400 25px ' + MIN, SOFT, '5px', 'center');
-    htext(ctx, '第一章は無料でお読みいただけます', W / 2, 572, '600 21px ' + SANS, o.colors[0], '5px', 'center');
+
+    // 収録作品の一覧。題名が長いと1行に収まらないので、幅に合わせて縮め、
+    // それでも溢れるなら「／」で折り返す。
+    var maxW = W - 160;
+    var lines = [o.works], fs2 = 25;
+    ctx.save();
+    ctx.font = '400 ' + fs2 + 'px ' + MIN; sp(ctx, '5px');
+    if (ctx.measureText(o.works).width > maxW) {
+      var items = o.works.split('　／　');
+      var half = Math.ceil(items.length / 2);
+      lines = [items.slice(0, half).join('　／　'), items.slice(half).join('　／　')];
+      fs2 = 23;
+      ctx.font = '400 ' + fs2 + 'px ' + MIN;
+      while (fs2 > 15 && lines.some(function (l) { return ctx.measureText(l).width > maxW; })) {
+        fs2 -= 1; ctx.font = '400 ' + fs2 + 'px ' + MIN;
+      }
+    }
+    ctx.restore();
+    var y0 = lines.length > 1 ? 506 : 528;
+    lines.forEach(function (l, li) {
+      htext(ctx, l, W / 2, y0 + li * (fs2 + 10), '400 ' + fs2 + 'px ' + MIN, SOFT, '5px', 'center');
+    });
+
+    htext(ctx, '第一章は無料でお読みいただけます', W / 2, 578, '600 21px ' + SANS, o.colors[0], '5px', 'center');
 
     grain(ctx, W, H, 0);
     return c.toDataURL('image/png');

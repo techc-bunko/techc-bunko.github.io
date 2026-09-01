@@ -149,11 +149,12 @@ ${titles.map((t) => `        <li><i style="background:${esc(t.accent)}"></i>${es
   }
 
   .works { list-style: none; margin-top: 2.2mm; }
+  /* 題名は長いものもあるので折り返しを許す（切れるより折れたほうがまし） */
   .works li {
-    display: flex; align-items: center; gap: 1.5mm;
-    font-size: 7.2pt; letter-spacing: .04em; line-height: 1.7;
-    white-space: nowrap;
+    display: flex; align-items: flex-start; gap: 1.5mm;
+    font-size: 6.8pt; letter-spacing: .01em; line-height: 1.55;
   }
+  .works i { margin-top: 1.1mm; }
   .works i { width: 1.5mm; height: 1.5mm; border-radius: 50%; flex: none; }
 
   .pass {

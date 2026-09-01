@@ -203,9 +203,11 @@ a { color: inherit; }
 .cover__title {
   writing-mode: vertical-rl; text-orientation: mixed;
   margin: 0; font-weight: 500;
-  font-size: clamp(1.55rem, 6.5vw, 2.15rem);
-  letter-spacing: .24em; line-height: 1.35;
-  max-block-size: min(56vh, 22rem);
+  font-size: clamp(1.45rem, 6vw, 2.05rem);
+  letter-spacing: .22em; line-height: 1.35;
+  /* 縦組みでは max-block-size が「幅」になってしまうので、必ず物理プロパティで高さを止める。
+     ここで止めた分だけ、長い題名は左へ列を折る（縦書きの本と同じ挙動）。 */
+  max-height: min(46vh, 17rem);
   color: var(--ink);
 }
 .cover__tagline {
