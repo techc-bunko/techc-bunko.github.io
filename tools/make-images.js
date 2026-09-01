@@ -127,7 +127,7 @@ window.__BUNKO_GEN = (function () {
     htext(ctx, o.no + '　' + o.colorName + '　' + o.genre, 80, 300, '600 22px ' + SANS, FAINT, '6px');
     htext(ctx, o.siteName, 80, 364, '500 44px ' + MIN, INK, '12px');
     htext(ctx, 'SANSHOKU BUNKO', 80, 402, '500 18px ' + LATIN, FAINT, '7px');
-    htext(ctx, '第一' + o.unit + '　無料公開中', 80, 466, '600 21px ' + SANS, o.accentDark, '5px');
+    htext(ctx, o.free, 80, 466, '600 21px ' + SANS, o.accentDark, '5px');
 
     grain(ctx, W, H, 0);
     return c.toDataURL('image/png');
@@ -175,7 +175,7 @@ window.__BUNKO_GEN = (function () {
       htext(ctx, l, W / 2, y0 + li * (fs2 + 10), '400 ' + fs2 + 'px ' + MIN, SOFT, '5px', 'center');
     });
 
-    htext(ctx, '第一章は無料でお読みいただけます', W / 2, 578, '600 21px ' + SANS, o.colors[0], '5px', 'center');
+    htext(ctx, o.free, W / 2, 578, '600 21px ' + SANS, o.colors[0], '5px', 'center');
 
     grain(ctx, W, H, 0);
     return c.toDataURL('image/png');
@@ -237,6 +237,9 @@ window.__BUNKO_GEN = (function () {
         colorName: meta.colorName,
         genre: meta.genre,
         no: '第' + (['一', '二', '三'][i] || i + 1) + '篇',
+        free: cfg.gate.previewChapters > 0
+          ? '第一' + (meta.unit || '章') + '　無料公開中'
+          : 'カードの合言葉で全文',
         unit: meta.unit || '章',
         siteName: cfg.siteName,
       })));
@@ -248,6 +251,9 @@ window.__BUNKO_GEN = (function () {
       tagline: cfg.tagline,
       works: titles.join('　／　'),
       colors: colors,
+      free: cfg.gate.previewChapters > 0
+        ? '第一章は無料でお読みいただけます'
+        : 'アクセスカードの合言葉で全文が読めます',
     })));
     log.push(await save('icon-512.png', icon(512, colors)));
     log.push(await save('icon-192.png', icon(192, colors)));

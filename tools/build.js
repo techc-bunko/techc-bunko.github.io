@@ -236,7 +236,7 @@ ${FONTS}
 <link rel="icon" href="../assets/icon-192.png">
 <link rel="apple-touch-icon" href="../assets/icon-192.png">
 </head>
-<body data-slug="${esc(work.slug)}" style="--accent:${meta.accent};--accent-dark:${meta.accentDark}">
+<body data-slug="${esc(work.slug)}" data-preview="${previewCount}" style="--accent:${meta.accent};--accent-dark:${meta.accentDark}">
 <div class="progress"></div>
 
 <header class="site-head">
@@ -264,7 +264,9 @@ ${isBi ? '    <button class="tool-btn" data-act="lang" type="button">EN</button>
       <div class="cover__rule"></div>
       <p class="cover__lead">${esc(meta.blurb)}</p>
       <div class="cover__stat">全 ${work.langs.ja.chapters.length} ${unit} ・ 約 ${chars.toLocaleString('ja-JP')} 字</div>
-      <div class="cover__free">第一${unit}は無料でお読みいただけます</div>
+      ${previewCount > 0
+        ? `<div class="cover__free">第一${unit}は無料でお読みいただけます</div>`
+        : `<div class="cover__free">カードの合言葉で全 ${work.langs.ja.chapters.length} ${unit}が読めます</div>`}
     </div>
   </section>
 
@@ -276,7 +278,7 @@ ${sections}
     <div class="gate__lock">🔒</div>
     <div class="gate__title">ここから先は、カードをお持ちの方へ</div>
     <p class="gate__desc">${esc(cfg.gate.hint)}<br>
-      残り ${lockedCount} ${unit}（全 ${work.langs.ja.chapters.length} ${unit}・約 ${chars.toLocaleString('ja-JP')} 字）が読めるようになります。
+      ${previewCount > 0 ? `残り ${lockedCount}` : `全 ${lockedCount}`} ${unit}（約 ${chars.toLocaleString('ja-JP')} 字）が読めるようになります。
       一度入力すれば、この端末では次回から自動で開きます。</p>
     <form class="gate__form" autocomplete="off">
       <input class="gate__input" type="text" inputmode="latin" autocapitalize="off"
@@ -318,11 +320,11 @@ function buildIndex(cfg, works, stats) {
           <span>${esc(meta.genre)}</span>
         </div>
         <h2 class="book__title">${esc(title)}</h2>
-        <p class="book__tagline">${esc(meta.tagline)}</p>
+        ${meta.tagline ? `<p class="book__tagline">${esc(meta.tagline)}</p>` : ''}
         <p class="book__blurb">${esc(meta.blurb)}</p>
         <div class="book__foot">
           <span>${esc(info)}</span>
-          <span class="book__go">${soon ? 'Coming soon' : `第一${meta.unit || '章'}を試し読み →`}</span>
+          <span class="book__go">${soon ? 'Coming soon' : (cfg.gate.previewChapters > 0 ? `第一${meta.unit || '章'}を試し読み →` : '合言葉で読む →')}</span>
         </div>
       </div>`;
       const style = `--bk:${meta.accent}`;
@@ -342,7 +344,7 @@ function buildIndex(cfg, works, stats) {
 <meta name="theme-color" content="${esc(cfg.works[0].accent)}">
 ${ogpTags(cfg, {
   title: `${cfg.siteName}｜${cfg.tagline}`,
-  desc: `${cfg.tagline} ${cfg.festival.name}で頒布するオリジナル短編小説。第一章は無料でお読みいただけます。`,
+  desc: `${cfg.tagline} ${cfg.festival.name}で頒布するオリジナル短編小説。${cfg.gate.previewChapters > 0 ? "第一章は無料でお読みいただけます。" : "アクセスカードの合言葉で全文が読めます。"}`,
   path: '',
   image: 'assets/ogp/index.png',
 })}
@@ -377,7 +379,9 @@ ${cards}
 
   <section class="notice">
     <h2>お読みいただくには</h2>
-    <p>各作品の<strong>第一章は、どなたでも無料でお読みいただけます</strong>。続きをお読みいただくには、会場で頒布している<strong>アクセスカード</strong>に書かれた合言葉が必要です。</p>
+    ${cfg.gate.previewChapters > 0
+      ? `<p>各作品の<strong>第一章は、どなたでも無料でお読みいただけます</strong>。続きをお読みいただくには、会場で頒布している<strong>アクセスカード</strong>に書かれた合言葉が必要です。</p>`
+      : `<p>本文をお読みいただくには、会場で頒布している<strong>アクセスカード</strong>に書かれた合言葉が必要です。<strong>試し読みは会場でお配りしている紙のサンプル</strong>をご覧ください。</p>`}
     <p>カード1枚で<strong>3作品すべて</strong>の全文が読めます。一度合言葉を入力すれば、その端末では次回から自動で開きます。</p>
     <p>頒布場所：${esc(cfg.festival.name)}　${esc(cfg.festival.booth)}　／　1枚 ${cfg.festival.price} 円</p>
   </section>

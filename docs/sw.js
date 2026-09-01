@@ -1,7 +1,7 @@
 /* 三色文庫 — オフライン用 Service Worker（自動生成：手で編集しない）
    一度開いたページを端末に保存し、電波が届かない会場でも読めるようにする。 */
 'use strict';
-var V = 'bunko-02a3b78d67';
+var V = 'bunko-b4cb2d9d86';
 var PRECACHE = [
   "./",
   "./index.html",

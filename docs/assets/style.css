@@ -354,6 +354,10 @@ a { color: inherit; }
    目次・ゲート・表紙は横組みのまま（操作系が縦になると読みにくいため）。 */
 .tate-note { display: none; }
 
+/* 試し読みを出さない設定のときは、解錠するまで本文が1文字も無いので
+   「左へスクロール」の案内も出さない（読むものが無いのに案内だけ出て混乱するため） */
+body[data-preview="0"]:not([data-unlocked]) .tate-note { display: none !important; }
+
 [data-tate="on"] .tate-note {
   display: block;
   width: min(var(--measure), calc(100% - 2.5rem)); margin: -1.5rem auto 2.5rem;

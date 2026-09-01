@@ -31,7 +31,8 @@
   var size = ls(function () { return localStorage.getItem(LS_SIZE); }, null) || 'm';
   var theme = ls(function () { return localStorage.getItem(LS_THEME); }, null) || 'auto';
   var lang = ls(function () { return localStorage.getItem(LS_LANG); }, null) || 'ja';
-  var tate = ls(function () { return localStorage.getItem(LS_TATE); }, null) || 'off';
+  // 既定は縦組み（本文は右から左へ、横にスライドして読む）
+  var tate = ls(function () { return localStorage.getItem(LS_TATE); }, null) || 'on';
 
   function applyPrefs() {
     root.setAttribute('data-size', size);
