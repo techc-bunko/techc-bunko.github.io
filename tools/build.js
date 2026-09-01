@@ -399,9 +399,128 @@ ${SW_REGISTER('./sw.js')}
   fs.writeFileSync(path.join(DOCS, 'index.html'), html);
 }
 
+/* ---------- 試し読みページ（docs/sample/） ----------
+   無料で配る紙のQRはここを指す。合言葉なしで各作の冒頭が読める、
+   買う前の人のための入口。本編（docs/works/）は全章ロックのままにしておき、
+   ここだけを「無料で読める場所」として切り出す。                        */
+function buildSample(cfg, works, stats) {
+  const n = (cfg.sample && cfg.sample.chapters) || 1;
+  const exclude = (cfg.sample && cfg.sample.exclude) || [];
+  const shown = cfg.works.filter((m) => works[m.slug] && !works[m.slug].placeholder && !exclude.includes(m.slug));
+
+  const blocks = shown
+    .map((meta, i) => {
+      const w = works[meta.slug];
+      const unit = meta.unit || '章';
+      const total = w.langs.ja.chapters.length;
+      const chs = w.langs.ja.chapters.slice(0, n);
+      const rest = total - chs.length;
+      const idx = cfg.works.findIndex((x) => x.slug === meta.slug);
+      return `  <section class="sample-work" style="--accent:${meta.accent};--accent-dark:${meta.accentDark}">
+    <div class="cover">
+      <div class="wrap">
+        <div class="cover__meta">
+          <span class="cover__no">第${['一', '二', '三'][idx] || idx + 1}篇</span><i>／</i>
+          <span class="cover__color">${esc(meta.colorName)}</span><i>／</i>
+          <span>${esc(meta.genre)}</span>
+        </div>
+        <div class="cover__plate"><h2 class="cover__title">${verticalize(w.langs.ja.title)}</h2></div>
+        <p class="cover__lead">${esc(meta.blurb)}</p>
+        <div class="cover__stat">全 ${total} ${unit} ・ 約 ${stats[meta.slug].chars.toLocaleString('ja-JP')} 字</div>
+      </div>
+    </div>
+${chs.map((c) => renderChapter(c, 'ja')).join('\n')}
+    <div class="more wrap">
+      <div class="more__rule"></div>
+      <p class="more__lead">試し読みはここまでです。</p>
+      <p class="more__body">残り <strong>${rest} ${unit}</strong> は、会場で頒布している<strong>アクセスカード</strong>の合言葉でお読みいただけます。</p>
+      <a class="more__btn" href="../works/${esc(meta.slug)}.html">『${esc(w.langs.ja.title)}』の続きを読む →</a>
+    </div>
+  </section>`;
+    })
+    .join('\n');
+
+  const html = `<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>試し読み｜${esc(cfg.siteName)}</title>
+<meta name="description" content="${esc(cfg.siteName)}の収録作品を、それぞれ冒頭だけ無料で公開しています。">
+<meta name="theme-color" content="${esc(cfg.works[0].accent)}">
+${ogpTags(cfg, {
+  title: `試し読み｜${cfg.siteName}`,
+  desc: `${cfg.tagline} 収録作品の冒頭を無料で公開しています。`,
+  path: 'sample/',
+  image: 'assets/ogp/index.png',
+})}
+<meta name="robots" content="noindex">
+${FONTS}
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="icon" href="../assets/icon-192.png">
+<link rel="apple-touch-icon" href="../assets/icon-192.png">
+</head>
+<body data-preview="sample">
+<div class="progress"></div>
+
+<header class="site-head">
+  <a class="site-head__mark" href="../">${esc(cfg.siteName)}</a>
+  <div class="site-head__title">試し読み</div>
+  <div class="site-head__tools">
+    <button class="tool-btn" data-act="tate" type="button">縦組</button>
+    <button class="tool-btn" data-act="size" type="button">あ</button>
+    <button class="tool-btn" data-act="theme" type="button">自動</button>
+  </div>
+</header>
+
+<main>
+  <section class="hero wrap">
+    <div class="hero__kicker">試し読み</div>
+    <h1 class="hero__title">${esc(cfg.siteName)}</h1>
+    <div class="hero__title-en">${esc(cfg.siteNameEn)}</div>
+    <div class="tri">${cfg.works.map((w) => `<span style="background:${esc(w.accent)}"></span>`).join('')}</div>
+    <p class="hero__lead">${shown.length}篇の冒頭を、無料でお読みいただけます。</p>
+  </section>
+
+  <div class="tate-note">縦組みで表示しています。本文は左へスクロールしてお読みください。</div>
+
+${blocks}
+
+  <section class="notice wrap">
+    <h2>続きをお読みになるには</h2>
+    <p>会場で頒布している<strong>アクセスカード</strong>に書かれた合言葉が必要です。<strong>カード1枚で${shown.length}作品すべて</strong>の全文が読めます。</p>
+    <p>一度合言葉を入力すれば、その端末では次回から自動で開きます。</p>
+    <p>頒布場所：${esc(cfg.festival.name)}　${esc(cfg.festival.booth)}　／　1枚 ${cfg.festival.price} 円</p>
+  </section>
+</main>
+
+<footer class="site-foot">
+  <div>${esc(cfg.siteName)} — ${esc(cfg.siteNameEn)}</div>
+  <div>本文の無断転載・再配布はご遠慮ください。</div>
+</footer>
+<script src="../assets/reader.js"></script>
+${SW_REGISTER('../sw.js')}
+</body>
+</html>
+`;
+
+  fs.mkdirSync(path.join(DOCS, 'sample'), { recursive: true });
+  fs.writeFileSync(path.join(DOCS, 'sample', 'index.html'), html);
+  const chars = shown.reduce(
+    (s, m) =>
+      s +
+      works[m.slug].langs.ja.chapters
+        .slice(0, n)
+        .reduce((a, c) => a + c.blocks.filter((b) => b.t === 'p').reduce((x, b) => x + b.text.replace(/\s/g, '').length, 0), 0),
+    0
+  );
+  return { works: shown.length, chars };
+}
+
 /* ---------- オフライン用ファイル（Service Worker / manifest） ---------- */
 function buildOffline(cfg, slugs, version) {
-  const precache = ['./', './index.html', './assets/style.css', './assets/reader.js']
+  const precache = ['./', './index.html', './sample/', './assets/style.css', './assets/reader.js']
     .concat(slugs.map((s) => `./works/${s}.html`));
 
   const sw = `/* 三色文庫 — オフライン用 Service Worker（自動生成：手で編集しない）
@@ -502,6 +621,10 @@ self.addEventListener('fetch', function (e) {
 
   buildIndex(cfg, works, stats);
   console.log(`  index      → docs/index.html`);
+  const smp = buildSample(cfg, works, stats);
+  console.log(
+    `  sample     → docs/sample/index.html （${smp.works}篇の冒頭 / 約 ${smp.chars.toLocaleString('ja-JP')} 字）`
+  );
 
   // 中身が変わるたびにキャッシュ名を変えたいので、生成物の内容から版番号を作る
   const version = require('node:crypto')

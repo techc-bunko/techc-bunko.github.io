@@ -10,6 +10,7 @@ Web に置くための一式です。サーバー・課金・アカウントは�
 ```
 docs/                       ← ここを GitHub Pages で公開する
   index.html                本棚トップ（3篇を並べて紹介・購入案内）
+  sample/index.html         試し読み（各作の冒頭。無料配布スリップのQRの行き先）
   works/kokoro.html         心の罪（全7章）
   works/mikata.html         味方（全8話）
   works/dareka.html         誰かのために生きてきた私が、私になる日（全8章）
@@ -95,7 +96,8 @@ node tools/serve.js
 | `siteUrl` | **公開後の URL**（例 `https://〇〇.github.io/sanshoku-bunko`）。ここが空だと OGP（SNSのサムネイル）が出ません |
 | `siteName` / `tagline` | 文庫名・キャッチコピー |
 | `festival.booth` / `price` | ブース名・カード1枚の価格 |
-| `gate.previewChapters` | Web で無料で読める章数。**現在 0**（試し読みは紙のみ）。1 以上にすると Web にも試し読みが出る |
+| `gate.previewChapters` | 作品ページで無料で読める章数。**現在 0**（本編は全章ロック） |
+| `sample.chapters` / `sample.exclude` | 試し読みページに載せる章数（既定 1）と、載せない作品の slug |
 | `works[].accent` | 作品ごとのアクセント色 |
 | `works[].tagline` / `blurb` | 帯文・あらすじ。**帯文は現在すべて空**（後で考え直す予定） |
 
@@ -264,7 +266,7 @@ s.onload = () => __BUNKO_GEN.run().then(console.log);
 - [ ] `src/config.json` の `festival.booth`（いまプレースホルダのまま）
 - [x] **アクセスカードの印刷データ**（`node tools/make-card.js` → `print/cards.html`）
 - [x] カードを試し刷りして、実物のQRをスマホで読めるか確認（2026-09-02 読み取り成功）
-- [ ] 紙のサンプル（『味方』第一話・A4片面・QR 付き） ← Web に試し読みを出さないので、これが唯一の試し読み
+- [x] 試し読みの導線（無料スリップ → `/sample/` → 本編へ）
 - [ ] 帯文を書き直す（いったん空にしてある）
 - [ ] AI 利用の明記（あとがき）
 - [ ] 『心の罪』第一章（＝無料で誰でも読める範囲）に性的な示唆を含む表現があるため、注意書きを出すか検討

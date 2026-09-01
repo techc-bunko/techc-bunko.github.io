@@ -126,6 +126,9 @@
     tick();
   }
 
+  /* 縦組みの初期位置合わせ。試し読みページにはゲートが無いので、ここで先に済ませる */
+  if (tate === 'on') requestAnimationFrame(resetTateScroll);
+
   /* ---------- ここから合言葉ゲート ---------- */
   var dataEl = document.getElementById('locked-data');
   if (!dataEl) return;
@@ -226,10 +229,7 @@
     chapters.forEach(function (c) { io.observe(c); });
   }
 
-  /* ---------- 初期化 ---------- */
-  if (tate === 'on') requestAnimationFrame(resetTateScroll);
-
-  /* 保存済みの合言葉で自動解錠 */
+  /* ---------- 初期化：保存済みの合言葉で自動解錠 ---------- */
   var saved = ls(function () { return localStorage.getItem(LS_PASS); }, null);
   if (saved) {
     tryUnlock(saved).then(function (ok) {

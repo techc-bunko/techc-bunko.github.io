@@ -349,6 +349,38 @@ a { color: inherit; }
   .book { grid-template-columns: 5px 1fr; }
 }
 
+/* ---------- 試し読みページ ---------- */
+/* 1ページに3篇を並べるので、作品ごとに色が切り替わることが分かるようにする */
+.sample-work + .sample-work { margin-top: clamp(3rem, 9vw, 5.5rem); }
+.sample-work .cover { padding-top: clamp(2rem, 7vw, 3.5rem); }
+.sample-work .cover__title { font-size: clamp(1.3rem, 5.4vw, 1.8rem); max-height: min(40vh, 15rem); }
+.sample-work .chapter { padding-top: clamp(1.6rem, 5vw, 2.6rem); }
+
+/* 「ここまで」→「続きはカードで」の導線 */
+.more {
+  margin: clamp(1.5rem, 5vw, 2.5rem) auto clamp(2rem, 6vw, 3rem);
+  padding: clamp(1.6rem, 5vw, 2.4rem) clamp(1.2rem, 5vw, 2rem);
+  border: 1px solid var(--rule); border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 6%, var(--paper-raised));
+  text-align: center;
+}
+.more__rule { width: 2.2rem; height: 2px; background: var(--accent); margin: 0 auto 1.4rem; }
+.more__lead {
+  margin: 0; font-size: .95rem; letter-spacing: .1em; color: var(--accent-dark);
+}
+.more__body {
+  margin: .9rem auto 1.6rem; max-width: 26rem;
+  font-size: .86rem; line-height: 2; color: var(--ink-soft);
+}
+.more__body strong { color: var(--ink); }
+.more__btn {
+  display: inline-block; padding: .75rem 1.6rem;
+  border-radius: 3px; background: var(--accent); color: #fff;
+  font-family: var(--sans); font-size: .82rem; font-weight: 600; letter-spacing: .1em;
+  text-decoration: none;
+}
+.more__btn:hover { background: var(--accent-dark); }
+
 /* ---------- 縦書きモード ---------- */
 /* 本文だけを縦組みにして、章ごとに横スクロールする面にする。
    目次・ゲート・表紙は横組みのまま（操作系が縦になると読みにくいため）。 */

@@ -32,6 +32,121 @@ function readPassphrase() {
 const esc = (s) =>
   String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+/* ---------- 無料配布用の試し読みスリップ ----------
+   売り物のカードとは別。QRを読むと docs/sample/ が開き、各作の冒頭が読める。
+   1枚あたり数円で刷れるよう、名刺の半分（91×27.5mm）で A4 に20面付けする。
+   合言葉は載せない（載せたら無料で全部読めてしまう）。                     */
+function slipSheet(cfg, qrSvg, sampleUrl, titles) {
+  const urlText = sampleUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  const colors = cfg.works.map((w) => w.accent);
+
+  const slip = `<div class="slip">
+    <div class="slip__left">
+      <div class="slip__brand">${esc(cfg.siteName)}</div>
+      <div class="slip__tri">${colors.map((c) => `<span style="background:${esc(c)}"></span>`).join('')}</div>
+      <div class="slip__lead">冒頭を無料で読めます</div>
+      <ul class="slip__works">
+${titles.map((t) => `        <li><i style="background:${esc(t.accent)}"></i>${esc(t.title)}</li>`).join('\n')}
+      </ul>
+      <div class="slip__foot">続きは${esc(cfg.festival.name)}の会場で（1枚 ${cfg.festival.price} 円）</div>
+    </div>
+    <div class="slip__right">
+      <div class="slip__qr">${qrSvg}</div>
+      <div class="slip__url">${esc(urlText)}</div>
+    </div>
+  </div>`;
+
+  return `<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>三色文庫 試し読みスリップ（無料配布用・印刷用）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4 portrait; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: #f0eeec;
+    font-family: "Shippori Mincho", "Yu Mincho", "YuMincho", "MS PMincho", serif;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .sheet {
+    width: 210mm; height: 297mm;
+    padding: 11mm 14mm;
+    margin: 0 auto; background: #fff;
+    display: grid;
+    grid-template-columns: repeat(2, 91mm);
+    grid-template-rows: repeat(10, 27.5mm);
+  }
+  .slip {
+    width: 91mm; height: 27.5mm;
+    padding: 2.6mm 3.4mm;
+    display: flex; gap: 2.6mm; align-items: center;
+    background: #fbf7f4; color: #2e2a28;
+    outline: .12mm dashed #cfc7c1; outline-offset: -.06mm;
+    overflow: hidden;
+  }
+  .slip__left { flex: 1 1 auto; min-width: 0; }
+  .slip__right { flex: 0 0 19mm; text-align: center; }
+  .slip__brand { font-size: 9.6pt; font-weight: 500; letter-spacing: .24em; }
+  .slip__tri { display: flex; gap: .9mm; margin-top: 1.1mm; }
+  .slip__tri span { width: 5mm; height: .7mm; border-radius: .35mm; }
+  .slip__lead {
+    margin-top: 1.5mm; font-size: 7pt; letter-spacing: .08em; color: #b3607d;
+  }
+  .slip__works { list-style: none; margin-top: .9mm; }
+  .slip__works li {
+    display: flex; align-items: flex-start; gap: 1.2mm;
+    font-size: 5.6pt; letter-spacing: 0; line-height: 1.5; color: #6b615c;
+  }
+  .slip__works i { width: 1.1mm; height: 1.1mm; border-radius: 50%; flex: none; margin-top: .8mm; }
+  .slip__foot {
+    margin-top: 1.2mm;
+    font-family: "Zen Kaku Gothic New", "Yu Gothic", sans-serif;
+    font-size: 5pt; letter-spacing: .04em; color: #a89e98;
+  }
+  .slip__qr { width: 19mm; height: 19mm; }
+  .slip__qr svg { width: 100%; height: 100%; display: block; shape-rendering: crispEdges; }
+  .slip__url {
+    margin-top: .8mm;
+    font-family: "Zen Kaku Gothic New", "Yu Gothic", sans-serif;
+    font-size: 4.2pt; color: #6b615c; word-break: break-all; line-height: 1.3;
+  }
+  .hint {
+    max-width: 210mm; margin: 8mm auto; padding: 5mm 6mm;
+    background: #fff; border: 1px solid #e3dbd5; border-radius: 3px;
+    font-family: "Zen Kaku Gothic New", "Yu Gothic", sans-serif;
+    font-size: 10pt; line-height: 1.9;
+  }
+  .hint h1 { font-size: 12pt; letter-spacing: .1em; margin-bottom: 3mm; }
+  .hint ul { margin: 2mm 0 0 5mm; }
+  .hint strong { color: #b3607d; }
+  @media print { .hint { display: none; } }
+</style>
+</head>
+<body>
+
+<div class="hint">
+  <h1>試し読みスリップ（無料配布用・A4に20面付け）</h1>
+  <ul>
+    <li><strong>これは無料で配るもの</strong>です。合言葉は載っていません。QRを読むと各作の冒頭が読めます</li>
+    <li>用紙 <strong>A4</strong> ／ 倍率 <strong>100%</strong>（「用紙に合わせる」は選ばない）／「背景のグラフィック」を<strong>オン</strong></li>
+    <li>売り物のカードより<strong>安っぽくてよい</strong>（普通紙で十分）。むしろカードとの差が出たほうが売れます</li>
+    <li>1枚あたり 名刺の半分サイズ。A4 1枚から20枚とれます</li>
+  </ul>
+</div>
+
+<div class="sheet">
+${Array.from({ length: 20 }, () => slip).join('\n')}
+</div>
+
+</body>
+</html>
+`;
+}
+
 /* ---------- 本体 ---------- */
 (async function main() {
   const url = String(cfg.siteUrl || '').replace(/\/+$/, '') + '/';
@@ -233,6 +348,19 @@ ${Array.from({ length: 10 }, () => card).join('\n')}
   fs.mkdirSync(OUT, { recursive: true });
   fs.writeFileSync(path.join(OUT, 'cards.html'), html);
 
+  // 無料配布用の試し読みスリップ（QRの行き先が違うだけで、作りは同じ）
+  const sampleUrl = url + 'sample/';
+  const sampleQr = await QRCode.toString(sampleUrl, {
+    type: 'svg',
+    errorCorrectionLevel: 'H',
+    margin: 0,
+  });
+  fs.writeFileSync(path.join(OUT, 'slips.html'), slipSheet(cfg, sampleQr, sampleUrl, titles));
+  const slipModules = (await QRCode.create(sampleUrl, { errorCorrectionLevel: 'H' })).modules.size;
+
+  console.log('  print/slips.html を作成しました（無料配布用・A4・20面付け・合言葉なし）');
+  console.log(`    QR: ${sampleUrl} ／ 19mm・${slipModules}マス・1マス約 ${(19 / slipModules).toFixed(2)} mm`);
+  console.log('');
   console.log('  print/cards.html を作成しました（A4・10面付け・片面）');
   console.log(`  QR       : ${url}`);
   console.log(`  誤り訂正 : H（30%汚れても読める） / ${modules}×${modules} マス`);
