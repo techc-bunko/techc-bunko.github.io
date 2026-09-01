@@ -48,14 +48,19 @@ docs/                       ← ここを GitHub Pages で公開する
 
 ### 準備（初回のみ）
 
-`passphrase.txt` に合言葉を1行で書きます（現在は `sakura2026`）。
+`passphrase.txt` に合言葉を1行で書きます。
 
-```
-sakura2026
-```
+> ⚠️ **この README は公開リポジトリに入っています。ここに合言葉そのものを書かないでください。**
+> 現在の合言葉は `passphrase.txt`（Git 管理外）を見るか、`node tools/build.js` の出力で確認できます。
 
 - 半角英数がおすすめです（スマホで打ちやすい）
-- **大文字小文字・全角半角・空白は区別しません**（`ＳＡＫＵＲＡ 2026` でも通ります）
+- 次のゆらぎは**すべて無視して照合**します。会場でスマホから打つ前提のためです
+  - 大文字小文字、全角半角
+  - 空白
+  - ハイフン類（`-` `‐` `—` など）と**長音符「ー」**（日本語キーボードだと `-` の代わりに `ー` を打つ人が多い）
+  - アンダーバー `_`、中黒 `・`
+- 変更したら `tools/build.js` と `docs/assets/reader.js` の `normalizePass` が
+  **同じ結果を返すこと**を必ず確認してください（ずれると正しい合言葉でも解錠できません）
 - このファイルは `.gitignore` 済みなので GitHub には上がりません
 
 ### ビルド
@@ -147,29 +152,39 @@ node tools/import.js bungo bungo && node tools/build.js
 
 原稿の置き場所:
 
-- 桜色メイド・心の罪 … `tools/extract.js` で元の HTML から抽出済み（再実行不要）
-- 文豪冷戦 … `src/raw/bungo.txt` が原稿。直すときはこのテキストを編集 → `import.js` → `build.js`
+- 心の罪 … `tools/extract.js` で元の HTML から抽出済み（再実行不要）
+- 劣等感 (1) … `src/raw/rettoukan.txt` が原稿
+- 文豪冷戦（現在は不採用） … `src/raw/bungo.txt`
+
+原稿を直すときは `src/raw/*.txt` を編集 → `node tools/import.js <ファイル名> <slug>` → `node tools/build.js`。
 
 ---
 
-## 5. GitHub Pages で公開する
+## 5. 公開する
 
-1. GitHub で新しいリポジトリを作る（例: `sanshoku-bunko`／**Public**）
-2. この `gakuensai_bunko` フォルダの中身を push する
-   ```bash
-   git init
-   git add .
-   git commit -m "三色文庫"
-   git branch -M main
-   git remote add origin https://github.com/<ユーザー名>/sanshoku-bunko.git
-   git push -u origin main
-   ```
-3. リポジトリの **Settings → Pages** を開く
-4. **Source: Deploy from a branch** ／ **Branch: `main`** ／ **Folder: `/docs`** を選んで Save
-5. 1〜2分後、`https://<ユーザー名>.github.io/sanshoku-bunko/` で公開されます
+**設定済みです。** 公開先は <https://techc-bunko.github.io/>。
 
-> `passphrase.txt` は `.gitignore` 済みなので push されません。
-> 公開後は必ず、シークレットウィンドウで開いて「第一章しか読めないこと」を確認してください。
+| 項目 | 値 |
+|---|---|
+| Organization | `techc-bunko`（所有は個人アカウント） |
+| リポジトリ | `techc-bunko.github.io`（Public） |
+| Pages | Deploy from a branch ／ `main` ／ `/docs` |
+
+内容を更新したいときは、ビルドしてから push するだけです。
+
+```bash
+node tools/build.js && git add -A && git commit -m "更新" && git push
+```
+
+1〜2分で反映されます。
+
+> **push されないもの**
+> - `passphrase.txt` … 合言葉。漏れると全部無料で読めます
+> - `src/` … **原稿そのもの**。公開リポジトリに平文で置くとカードを売る意味がなくなるため除外しています
+>
+> つまり**原稿は GitHub にバックアップされません。** `src/` は別途どこかにコピーを取ってください。
+
+更新したら、シークレットウィンドウで開いて「第一章しか読めないこと」を毎回確認してください。
 
 ### 合言葉を変えたくなったら
 
@@ -241,8 +256,8 @@ s.onload = () => __BUNKO_GEN.run().then(console.log);
 
 開催は **2026年10月31日（土）〜11月1日（日）**。カード入稿の実質デッドラインは 10/17 頃。
 
-- [ ] **GitHub Pages へ公開**して URL を確定する → `src/config.json` の `siteUrl` に入れて再ビルド（OGP が有効になる）
-- [ ] 合言葉を本番用に変更する（現在 `sakura2026` は不採用作品の名残）
+- [x] **GitHub Pages へ公開**（`https://techc-bunko.github.io/`・2026-09-01 完了。`siteUrl` 設定済み・OGP有効）
+- [x] 合言葉を本番用に変更（2026-09-01 完了）
 - [ ] `src/config.json` の `festival.booth`（いまプレースホルダのまま）
 - [ ] **アクセスカードの印刷データ**（名刺サイズ・QR コード付き・A4 10面付け）
 - [ ] 紙のサンプル（『劣等感 (1)』第一話・A4片面・QR 付き）
