@@ -1,0 +1,14 @@
+# 合言葉（これが漏れると全部無料になる）
+passphrase.txt
+
+# 原稿そのもの。
+# このリポジトリは GitHub Pages で「公開」されるため、src/ を push すると
+# src/works/*.json と src/raw/*.txt から本文が平文で読めてしまい、
+# アクセスカードを売る意味がなくなる。
+# 公開してよいのは docs/（第一章のみ平文・以降は AES-GCM で暗号化済み）だけ。
+# → src/ は手元だけに置き、別途バックアップを取ること。
+src/
+
+node_modules/
+.DS_Store
+Thumbs.db
