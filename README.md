@@ -153,7 +153,7 @@ node tools/import.js mikata mikata && node tools/build.js
 
 原稿の置き場所:
 
-- 心の罪 … `tools/extract.js` で元の HTML から抽出済み（再実行不要）
+- 心の罪 … `src/raw/kokoro.txt` が原稿（元は HTML から抽出したものを書き出したもの。`tools/extract.js` は再実行しないこと）
 - 味方 … `src/raw/mikata.txt` が原稿
 - 誰かのために生きてきた私が、私になる日 … `src/raw/dareka.txt` が原稿
 - 文豪冷戦（現在は不採用） … `src/raw/bungo.txt`
@@ -263,7 +263,7 @@ s.onload = () => __BUNKO_GEN.run().then(console.log);
 - [x] 合言葉を本番用に変更（2026-09-01 完了）
 - [ ] `src/config.json` の `festival.booth`（いまプレースホルダのまま）
 - [x] **アクセスカードの印刷データ**（`node tools/make-card.js` → `print/cards.html`）
-- [ ] カードを試し刷りして、実物のQRをスマホで読めるか確認
+- [x] カードを試し刷りして、実物のQRをスマホで読めるか確認（2026-09-02 読み取り成功）
 - [ ] 紙のサンプル（『味方』第一話・A4片面・QR 付き）
 - [ ] AI 利用の明記（あとがき）
 - [ ] 『心の罪』第一章（＝無料で誰でも読める範囲）に性的な示唆を含む表現があるため、注意書きを出すか検討
