@@ -10,8 +10,9 @@ Web に置くための一式です。サーバー・課金・アカウントは�
 ```
 docs/                       ← ここを GitHub Pages で公開する
   index.html                本棚トップ（3篇を並べて紹介・購入案内）
-  works/kokoro.html         心の罪 ―― 時効（全7章）
-  works/rettoukan.html      劣等感 (1)（全8話）
+  works/kokoro.html         心の罪（全7章）
+  works/mikata.html         味方（全8話）
+  works/dareka.html         誰かのために生きてきた私が、私になる日（全8章）
   assets/style.css          共通デザイン（和紙色 × 作品ごとのアクセント色）
   assets/reader.js          合言葉ゲート／縦組み／文字サイズ／夜モード／読書位置保存
   assets/ogp/*.png          SNSにURLを貼ったときのサムネイル（1200×630）
@@ -147,13 +148,14 @@ JSON を直接いじるのは大変なので、**プレーンテキストから�
 例:
 
 ```bash
-node tools/import.js bungo bungo && node tools/build.js
+node tools/import.js mikata mikata && node tools/build.js
 ```
 
 原稿の置き場所:
 
 - 心の罪 … `tools/extract.js` で元の HTML から抽出済み（再実行不要）
-- 劣等感 (1) … `src/raw/rettoukan.txt` が原稿
+- 味方 … `src/raw/mikata.txt` が原稿
+- 誰かのために生きてきた私が、私になる日 … `src/raw/dareka.txt` が原稿
 - 文豪冷戦（現在は不採用） … `src/raw/bungo.txt`
 
 原稿を直すときは `src/raw/*.txt` を編集 → `node tools/import.js <ファイル名> <slug>` → `node tools/build.js`。
@@ -197,18 +199,19 @@ node tools/build.js && git add -A && git commit -m "更新" && git push
 
 | # | 色 | 作品 | 構成 | 分量 |
 |---|---|---|---|---|
-| 一 | 藍色 `#5b6f92` | 心の罪 ―― 時効 | 全7章 | 約 4,997 字 |
-| 二 | 若草色 `#7f9b6a` | 劣等感 (1) | 全8話 | 約 6,029 字 |
-| 三 | 山吹色 `#c08a3e` | （第三作・準備中） | — | — |
+| 一 | 藍色 `#5b6f92` | 心の罪 | 全7章 | 約 4,997 字 |
+| 二 | 若草色 `#7f9b6a` | 味方 | 全8話 | 約 6,029 字 |
+| 三 | 山吹色 `#c08a3e` | 誰かのために生きてきた私が、私になる日 | 全8章 | 約 3,361 字 |
 
-現在の合計は約 11,026 字。
+現在の合計は約 14,387 字。
 
 > **原稿は一字一句そのまま**が方針です。誤字・句読点・記号を直してはいけません。
 > 章の区切り（`##` 行）だけは「第一章を無料試し読みにする」ために必要なので入れています。
 >
-> 『文豪冷戦』はラインナップから外しましたが、原稿は `src/raw/bungo.txt` と
-> `src/works/bungo.json` に残してあります。戻すときは `src/config.json` の
-> `work3` の項目を差し替えて `node tools/build.js` するだけです。
+> 題名の変更履歴: 『心の罪 ―― 時効』→『心の罪』、『劣等感 (1)』→『味方』（いずれも本文は無変更）。
+>
+> 『文豪冷戦』『桜色メイド』はラインナップから外しました。文豪冷戦の原稿は
+> `src/raw/bungo.txt` に残してあるので、`src/config.json` に項目を足せば戻せます。
 
 ---
 
@@ -259,10 +262,10 @@ s.onload = () => __BUNKO_GEN.run().then(console.log);
 - [x] **GitHub Pages へ公開**（`https://techc-bunko.github.io/`・2026-09-01 完了。`siteUrl` 設定済み・OGP有効）
 - [x] 合言葉を本番用に変更（2026-09-01 完了）
 - [ ] `src/config.json` の `festival.booth`（いまプレースホルダのまま）
-- [ ] **アクセスカードの印刷データ**（名刺サイズ・QR コード付き・A4 10面付け）
-- [ ] 紙のサンプル（『劣等感 (1)』第一話・A4片面・QR 付き）
+- [x] **アクセスカードの印刷データ**（`node tools/make-card.js` → `print/cards.html`）
+- [ ] カードを試し刷りして、実物のQRをスマホで読めるか確認
+- [ ] 紙のサンプル（『味方』第一話・A4片面・QR 付き）
 - [ ] AI 利用の明記（あとがき）
-- [ ] 第三作の原稿
 - [ ] 『心の罪』第一章（＝無料で誰でも読める範囲）に性的な示唆を含む表現があるため、注意書きを出すか検討
 
 ---
