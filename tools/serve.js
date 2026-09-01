@@ -53,6 +53,15 @@ http
         .end(fs.readFileSync(path.join(__dirname, 'make-images.js')));
       return;
     }
+    // 印刷用データ（カード・サンプル）の確認用。docs/ の外なので公開はされない。
+    if (p.startsWith('/_print/')) {
+      const f = path.join(__dirname, '..', 'print', path.normalize(p.slice(8)));
+      if (!f.startsWith(path.join(__dirname, '..', 'print')) || !fs.existsSync(f)) {
+        res.writeHead(404).end('404'); return;
+      }
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }).end(fs.readFileSync(f));
+      return;
+    }
     // 画像生成が原稿と設定を読むための口（ローカル専用・読み取りのみ）
     if (p.startsWith('/_src/')) {
       const f = path.join(__dirname, '..', 'src', path.normalize(p.slice(6)));

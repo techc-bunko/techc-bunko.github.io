@@ -1,0 +1,16 @@
+{
+  "name": "sanshoku-bunko",
+  "version": "1.0.0",
+  "private": true,
+  "description": "三色文庫 — 学園祭頒布サイト。第一章は無料、続きはアクセスカードの合言葉で解錠する。",
+  "scripts": {
+    "build": "node tools/build.js",
+    "serve": "node tools/serve.js",
+    "card": "node tools/make-card.js"
+  },
+  "//": "サイト本体（tools/build.js）は依存ゼロで動く。下の2つはアクセスカードのQR生成と、そのQRが本当に読めるかの検証にだけ使う。",
+  "dependencies": {
+    "jsqr": "^1.4.0",
+    "qrcode": "^1.5.4"
+  }
+}

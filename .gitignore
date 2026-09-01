@@ -12,3 +12,9 @@ src/
 node_modules/
 .DS_Store
 Thumbs.db
+
+# アクセスカードの印刷データ。合言葉が刷り込まれているので公開しない。
+print/
+
+# 画像生成・カード生成用のツールの依存
+package-lock.json
