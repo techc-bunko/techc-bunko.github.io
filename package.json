@@ -1,0 +1,10 @@
+{
+  "name": "rettoukan",
+  "version": "0.1.0",
+  "private": true,
+  "description": "短編「劣等感は味方」を全編無料公開する静的サイト。依存ゼロで動く。",
+  "scripts": {
+    "build": "node tools/build.js",
+    "serve": "node tools/serve.js"
+  }
+}
