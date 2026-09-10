@@ -1,109 +1,159 @@
 <!doctype html>
-<html lang="ja">
+<html lang="ja" data-theme="light" data-size="2" data-font="mincho" data-writing="horizontal">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>三色文庫｜三つの色の、三つの物語。</title>
-<meta name="description" content="三つの色の、三つの物語。 オリジナル短編小説を公開しています。">
-<meta name="theme-color" content="#5b6f92">
+<meta name="description" content="三色文庫 — 三つの色の、三つの物語。 オリジナル短編小説3篇。">
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="assets/icon-192.png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="三色文庫">
 <meta property="og:title" content="三色文庫｜三つの色の、三つの物語。">
-<meta property="og:description" content="三つの色の、三つの物語。 学園祭で頒布するオリジナル短編小説。アクセスカードの合言葉で全文が読めます。">
+<meta property="og:description" content="オリジナル短編小説3篇。合計 約 14,498 字。">
 <meta property="og:url" content="https://techc-bunko.github.io/">
 <meta property="og:image" content="https://techc-bunko.github.io/assets/ogp/index.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="三色文庫｜三つの色の、三つの物語。">
-<meta name="twitter:description" content="三つの色の、三つの物語。 学園祭で頒布するオリジナル短編小説。アクセスカードの合言葉で全文が読めます。">
+<meta name="twitter:description" content="オリジナル短編小説3篇。合計 約 14,498 字。">
 <meta name="twitter:image" content="https://techc-bunko.github.io/assets/ogp/index.png">
-<meta name="robots" content="noindex">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600&family=Zen+Kaku+Gothic+New:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600&display=swap">
 <link rel="stylesheet" href="assets/style.css">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="assets/icon-192.png">
-<link rel="apple-touch-icon" href="assets/icon-192.png">
+<style>
+.a-kokoro{--accent-raw:#5b6f92;--accent:#5b6f92;--accent-ink:#fff}
+[data-theme="dark"] .a-kokoro{--accent-raw:#94a1b8;--accent:#94a1b8;--accent-ink:#14151a}
+.a-mikata{--accent-raw:#7f9b6a;--accent:#637953;--accent-ink:#fff}
+[data-theme="dark"] .a-mikata{--accent-raw:#acbe9e;--accent:#acbe9e;--accent-ink:#14151a}
+.a-dareka{--accent-raw:#c08a3e;--accent:#966c30;--accent-ink:#fff}
+[data-theme="dark"] .a-dareka{--accent-raw:#d6b382;--accent:#d6b382;--accent-ink:#14151a}
+</style>
+<script>(function(){try{var p=JSON.parse(localStorage.getItem('bunko.prefs')||'{}');var t=p.theme||'auto';if(t==='auto')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';var d=document.documentElement;d.setAttribute('data-theme',t);d.setAttribute('data-size',String(p.size==null?2:p.size));d.setAttribute('data-font',p.font||'mincho');d.setAttribute('data-writing',p.writing||'horizontal');}catch(e){}})()</script>
 </head>
-<body>
-<header class="site-head">
-  <a class="site-head__mark" href="./">三色文庫</a>
-  <div class="site-head__title"></div>
-  <div class="site-head__tools">
-    <button class="tool-btn" data-act="theme" type="button">自動</button>
+<body class="top-page">
+<header class="topbar">
+  <div class="topbar__in">
+    <a class="topbar__home" href=""><span class="topbar__dots"><i style="background:#5b6f92"></i><i style="background:#7f9b6a"></i><i style="background:#c08a3e"></i></span>三色文庫</a>
+    <div class="topbar__title"></div>
+    <div class="topbar__tools">
+      
+      <button class="iconbtn" id="panel-btn" type="button" aria-expanded="false" aria-label="表示設定"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h11M4 12h16M4 17h8"/><circle cx="18" cy="7" r="2"/><circle cx="15" cy="17" r="2"/></svg></button>
+    </div>
   </div>
+  <div class="progress" aria-hidden="true"></div>
 </header>
-
-<main class="wrap">
+<main>
   <section class="hero">
-    <div class="hero__kicker">学園祭 頒布</div>
+    <p class="hero__eyebrow">学園祭 頒布</p>
     <h1 class="hero__title">三色文庫</h1>
-    <div class="hero__title-en">SANSHOKU BUNKO</div>
-    <div class="tri"><span style="background:#5b6f92"></span><span style="background:#7f9b6a"></span><span style="background:#c08a3e"></span></div>
-    <p class="hero__lead">三つの色の、三つの物語。</p>
+    <p class="hero__en">SANSHOKU BUNKO</p>
+    <div class="hero__bars"><i style="background:#5b6f92"></i><i style="background:#7f9b6a"></i><i style="background:#c08a3e"></i></div>
+    <p class="hero__tagline">三つの色の、三つの物語。</p>
   </section>
-
-  <div class="shelf">
-    <a class="book" style="--bk:#5b6f92" href="works/kokoro.html"><div class="book__spine"></div>
-      <div class="book__body">
-        <div class="book__meta">
-          <span class="book__no">第一篇</span>
-          <span class="book__color">藍色</span>
+  <section class="section"><div class="wrap--wide">
+    <div class="shelf">
+      <a class="card a-kokoro" href="works/kokoro.html">
+        <div class="card__meta">
+          <span class="card__no">01</span>
+          <span class="card__color">藍色</span>
           <span>ヒューマンドラマ</span>
         </div>
-        <h2 class="book__title">心の罪</h2>
-        
-        <p class="book__blurb">大好きな姉の結婚を聞いた途端、胸の底から湧き上がった黒い感情。妹・沙也加が抱えた「心の罪」と、その先にある赦しを描く七章の物語。</p>
-        <div class="book__foot">
-          <span>全 7 章 ・ 約 4,997 字</span>
-          <span class="book__go">合言葉で読む →</span>
+        <h2 class="card__title">心の罪</h2>
+        <p class="card__blurb">大好きな姉の結婚を聞いた途端、胸の底から湧き上がった黒い感情。妹・沙也加が抱えた「心の罪」と、その先にある赦しを描く七章の物語。</p>
+        <p class="card__notice"><span>※</span><span>性的な内容を示唆する表現を含みます</span></p>
+        <div class="card__foot">
+          <span>全 7 章 ・ 約 5,006 字</span>
+          <span class="card__go">読む →</span>
         </div>
-      </div></a>
-    <a class="book" style="--bk:#7f9b6a" href="works/mikata.html"><div class="book__spine"></div>
-      <div class="book__body">
-        <div class="book__meta">
-          <span class="book__no">第二篇</span>
-          <span class="book__color">若草色</span>
+      </a>
+      <a class="card a-mikata" href="works/mikata.html">
+        <div class="card__meta">
+          <span class="card__no">02</span>
+          <span class="card__color">若草色</span>
           <span>お仕事・成長小説</span>
         </div>
-        <h2 class="book__title">味方</h2>
+        <h2 class="card__title">味方</h2>
+        <p class="card__blurb">終わらない仕事、減らないメール、怒られ続ける日々。SNSに並ぶ同期の華やかな報告を見るたび、胸の奥が重くなる。そんな新人社員が、先輩とのランチでもらった一つの金言。全八話。</p>
         
-        <p class="book__blurb">終わらない仕事、減らないメール、怒られ続ける日々。SNSに並ぶ同期の華やかな報告を見るたび、胸の奥が重くなる。そんな新人社員が、先輩とのランチでもらった一つの金言。全八話。</p>
-        <div class="book__foot">
+        <div class="card__foot">
           <span>全 8 話 ・ 約 6,029 字</span>
-          <span class="book__go">合言葉で読む →</span>
+          <span class="card__go">読む →</span>
         </div>
-      </div></a>
-    <a class="book" style="--bk:#c08a3e" href="works/dareka.html"><div class="book__spine"></div>
-      <div class="book__body">
-        <div class="book__meta">
-          <span class="book__no">第三篇</span>
-          <span class="book__color">山吹色</span>
+      </a>
+      <a class="card a-dareka" href="works/dareka.html">
+        <div class="card__meta">
+          <span class="card__no">03</span>
+          <span class="card__color">山吹色</span>
           <span>家族・自立の物語</span>
         </div>
-        <h2 class="book__title">誰かのために生きてきた私が、私になる日</h2>
+        <h2 class="card__title">誰かのために生きてきた私が、私になる日</h2>
+        <p class="card__blurb">政治家一族の長女として生まれた「私」は、家のために三度、自分の心を殺した。名前も、人生も、誰かのために差し出してきた女性が、初めて自分の意思で歩き出すまでの全八章。</p>
         
-        <p class="book__blurb">政治家一族の長女として生まれた「私」は、家のために三度、自分の心を殺した。名前も、人生も、誰かのために差し出してきた女性が、初めて自分の意思で歩き出すまでの全八章。</p>
-        <div class="book__foot">
-          <span>全 8 章 ・ 約 3,361 字</span>
-          <span class="book__go">合言葉で読む →</span>
+        <div class="card__foot">
+          <span>全 8 章 ・ 約 3,463 字</span>
+          <span class="card__go">読む →</span>
         </div>
-      </div></a>
-  </div>
-
-  <section class="notice">
-    <h2>お読みいただくには</h2>
-    <p>本文をお読みいただくには、会場で頒布している<strong>アクセスカード</strong>に書かれた合言葉が必要です。<strong>試し読みは会場でお配りしている紙のサンプル</strong>をご覧ください。</p>
-    <p>カード1枚で<strong>3作品すべて</strong>の全文が読めます。一度合言葉を入力すれば、その端末では次回から自動で開きます。</p>
-    <p>頒布場所：学園祭　（教室・ブース名をここに）　／　1枚 300 円</p>
-  </section>
+      </a>
+    </div>
+  </div></section>
+  <section class="section section--soft"><div class="wrap">
+    <p class="section__label">Access card</p>
+    <h2 class="section__title">読みかた</h2>
+    <p class="section__text">三色文庫の3篇（合計 約 14,498 字）は、この一つのサイトの中にあります。カードの裏に書かれた合言葉を一度入れれば、以降はこの端末で自動的に開きます。</p>
+    <ol class="howto">
+      <li>学園祭の（教室・ブース名をここに）でアクセスカードを受け取る（1枚 300 円）。</li>
+      <li>カードのQRコードを読み取って、このページを開く。</li>
+      <li>下の欄に合言葉を入力する。カード1枚で3作品すべて読めます。</li>
+      <li>読みかけの位置は端末に保存されるので、あとから続きを読める。</li>
+    </ol>
+    <section class="gate" id="gate">
+  <h2 class="gate__title"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>ここから先は、カードをお持ちの方へ</h2>
+  <p class="gate__hint">カードの裏に書かれた合言葉（半角英数）を入力してください。</p>
+  <form class="gate__form" autocomplete="off">
+    <input class="gate__input" type="text" inputmode="latin" autocapitalize="none" autocorrect="off"
+           spellcheck="false" placeholder="合言葉" aria-label="合言葉">
+    <button class="btn btn--primary" type="submit">解錠する</button>
+  </form>
+  <p class="gate__msg" role="status" aria-live="polite"></p>
+  <p class="gate__buy">カードは学園祭の（教室・ブース名をここに）で頒布しています（1枚 300 円）。<br>カード1枚で3作品すべて読めます。</p>
+</section>
+  </div></section>
+  <section class="section"><div class="wrap">
+    <p class="section__label">Sample</p>
+    <h2 class="section__title">試し読みについて</h2>
+    <p class="section__text">試し読みは、会場でお配りしている紙のサンプルをご覧ください。このサイトの本文は、カードの合言葉をお持ちの方だけがお読みいただけます。</p>
+  </div></section>
 </main>
-
-<footer class="site-foot">
-  <div>三色文庫 — SANSHOKU BUNKO</div>
-  <div>本文の無断転載・再配布はご遠慮ください。</div>
+<footer class="foot">
+  <div class="wrap">
+    <p>三色文庫 — 三つの色の、三つの物語。<br>
+    掲載作品はすべてオリジナルです。無断転載・二次配布はご遠慮ください。</p>
+  </div>
 </footer>
-<script src="assets/reader.js"></script>
-<script>if('serviceWorker' in navigator&&location.protocol!=='file:'){addEventListener('load',function(){navigator.serviceWorker.register("./sw.js").catch(function(){})})}</script>
+<div class="panel" id="panel" hidden>
+  <div class="panel__row">
+      <div class="panel__label">明るさ</div>
+      <div class="seg"><button type="button" data-pref="theme" data-value="auto" aria-pressed="false">端末に合わせる</button><button type="button" data-pref="theme" data-value="light" aria-pressed="false">明</button><button type="button" data-pref="theme" data-value="dark" aria-pressed="false">暗</button></div>
+    </div>
+  <div class="panel__row">
+      <div class="panel__label">文字の大きさ</div>
+      <div class="seg"><button type="button" data-pref="size" data-value="0" aria-pressed="false">小</button><button type="button" data-pref="size" data-value="1" aria-pressed="false">中小</button><button type="button" data-pref="size" data-value="2" aria-pressed="false">標準</button><button type="button" data-pref="size" data-value="3" aria-pressed="false">中大</button><button type="button" data-pref="size" data-value="4" aria-pressed="false">大</button></div>
+    </div>
+  <div class="panel__row">
+      <div class="panel__label">書体</div>
+      <div class="seg"><button type="button" data-pref="font" data-value="mincho" aria-pressed="false">明朝</button><button type="button" data-pref="font" data-value="gothic" aria-pressed="false">ゴシック</button></div>
+    </div>
+  <div class="panel__row">
+      <div class="panel__label">組み方</div>
+      <div class="seg"><button type="button" data-pref="writing" data-value="horizontal" aria-pressed="false">横組み</button><button type="button" data-pref="writing" data-value="vertical" aria-pressed="false">縦組み</button></div>
+    </div>
+  <p class="panel__note">設定はこの端末に保存され、3篇すべてに適用されます。</p>
+</div>
+<script type="application/json" id="bunko-data">{"verifier":{"v":1,"iter":210000,"salt":"P1hkAtIO6aMwnxmFnnuL7w==","iv":"dOVTa8h0s7Czn1od","ct":"0pAObLoAIYgXoK1VF1P6k5RP"}}</script>
+<script src="assets/reader.js" defer></script>
+<script>if('serviceWorker' in navigator&&location.protocol!=='file:'){addEventListener('load',function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}</script>
 </body>
 </html>

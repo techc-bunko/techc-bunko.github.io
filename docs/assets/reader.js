@@ -1,253 +1,468 @@
 /* ============================================================
-   三色文庫 — リーダー / 合言葉ゲート
-   本文は AES-GCM で暗号化してページに埋め込まれている。
-   合言葉から PBKDF2 で鍵を導出し、ブラウザ内で復号する。
-   （合言葉なしでは本文は物理的に取り出せない）
-   ============================================================ */
-(function () {
-  'use strict';
+   三色文庫 — リーダー
+   src/assets/reader.js を編集して `npm run build` で docs/ へコピーされる。
+   docs/assets/reader.js は生成物なので直接編集しないこと。
 
-  var LS_PASS = 'bunko:pass';
-  var LS_SIZE = 'bunko:size';
-  var LS_THEME = 'bunko:theme';
-  var LS_LANG = 'bunko:lang';
-  var LS_TATE = 'bunko:tate';
+   このファイルがやること:
+     1. 表示設定（明暗・文字サイズ・本文フォント・縦横）の保存と適用
+     2. 合言葉ゲート（AES-GCM の復号）。解錠した合言葉は端末に保存し3作で共有
+     3. 1話ずつ表示するルーティング（#c1, #c2 …）と読書位置の復元
+
+   合言葉の正規化は tools/build.js の normalizePass と必ず同じ結果にすること。
+   ずれると正しい合言葉でも解錠できなくなる。
+   ============================================================ */
+'use strict';
+
+(function () {
+  /* ---------- localStorage（プライベートモード等で落ちるので必ず包む） ---------- */
+  var store = {
+    get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+    del: function (k) { try { localStorage.removeItem(k); } catch (e) {} },
+  };
+  var K_PASS = 'bunko.pass';
+  var K_PREFS = 'bunko.prefs';
+  var kPos = function (slug) { return 'bunko.pos.' + slug; };
+  var kRead = function (slug) { return 'bunko.read.' + slug; };
+
   var root = document.documentElement;
 
-  /* ---------- 小道具 ---------- */
-  function ls(fn, fallback) { try { return fn(); } catch (e) { return fallback; } }
-  function b64ToBytes(b64) {
-    var bin = atob(b64), out = new Uint8Array(bin.length);
-    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-    return out;
-  }
-  /* build.js の normalizePass と必ず同じ結果にすること（違うと正しい合言葉でも解錠できない）。
-     全角/半角・大文字小文字・空白・ハイフン類・長音符「ー」・アンダーバー・中黒を無視する。 */
-  function normalizePass(s) {
-    return String(s).normalize('NFKC').replace(/[\s\-‐-―−ー_・]/g, '').toLowerCase();
-  }
+  /* ---------- 表示設定 ---------- */
+  var DEFAULTS = { theme: 'auto', size: 2, font: 'mincho', writing: 'horizontal' };
+  var prefs = (function () {
+    var p = {};
+    try { p = JSON.parse(store.get(K_PREFS) || '{}') || {}; } catch (e) { p = {}; }
+    for (var k in DEFAULTS) if (!(k in p)) p[k] = DEFAULTS[k];
+    return p;
+  })();
 
-  /* ---------- 表示設定（文字サイズ・テーマ・言語） ---------- */
-  var size = ls(function () { return localStorage.getItem(LS_SIZE); }, null) || 'm';
-  var theme = ls(function () { return localStorage.getItem(LS_THEME); }, null) || 'auto';
-  var lang = ls(function () { return localStorage.getItem(LS_LANG); }, null) || 'ja';
-  // 既定は縦組み（本文は右から左へ、横にスライドして読む）
-  var tate = ls(function () { return localStorage.getItem(LS_TATE); }, null) || 'on';
+  var darkQuery = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
 
   function applyPrefs() {
-    root.setAttribute('data-size', size);
-    if (theme === 'auto') root.removeAttribute('data-theme');
-    else root.setAttribute('data-theme', theme);
-    root.setAttribute('data-lang', lang);
-    root.setAttribute('data-tate', tate);
-    root.lang = lang;
+    var theme = prefs.theme === 'auto' ? (darkQuery && darkQuery.matches ? 'dark' : 'light') : prefs.theme;
+    root.setAttribute('data-theme', theme);
+    root.setAttribute('data-size', String(prefs.size));
+    root.setAttribute('data-font', prefs.font);
+    root.setAttribute('data-writing', prefs.writing);
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', theme === 'dark' ? '#16171b' : '#ffffff');
+  }
+  function savePrefs() { store.set(K_PREFS, JSON.stringify(prefs)); applyPrefs(); syncPanel(); }
+  if (darkQuery && darkQuery.addEventListener) {
+    darkQuery.addEventListener('change', function () { if (prefs.theme === 'auto') applyPrefs(); });
   }
   applyPrefs();
 
-  document.addEventListener('click', function (ev) {
-    var btn = ev.target.closest('[data-act]');
-    if (!btn) return;
-    var act = btn.getAttribute('data-act');
+  /* ---------- 合言葉 ---------- */
+  /* build.js の PASS_IGNORE と同一。会場でスマホから打つ前提のゆらぎを吸収する。 */
+  var PASS_IGNORE = /[\s\-‐-―−ー_・]/g;
+  function normalizePass(s) {
+    return String(s).normalize('NFKC').replace(PASS_IGNORE, '').toLowerCase();
+  }
 
-    if (act === 'size') {
-      size = size === 'm' ? 'l' : size === 'l' ? 'xl' : 'm';
-      ls(function () { localStorage.setItem(LS_SIZE, size); });
-      btn.textContent = size === 'm' ? 'あ' : size === 'l' ? 'あ+' : 'あ++';
-    } else if (act === 'theme') {
-      theme = theme === 'auto' ? 'dark' : theme === 'dark' ? 'light' : 'auto';
-      ls(function () { localStorage.setItem(LS_THEME, theme); });
-      btn.textContent = theme === 'auto' ? '自動' : theme === 'dark' ? '夜' : '昼';
-    } else if (act === 'lang') {
-      lang = lang === 'ja' ? 'en' : 'ja';
-      ls(function () { localStorage.setItem(LS_LANG, lang); });
-      btn.textContent = lang === 'ja' ? 'EN' : '日本語';
-    } else if (act === 'tate') {
-      tate = tate === 'on' ? 'off' : 'on';
-      ls(function () { localStorage.setItem(LS_TATE, tate); });
-      btn.textContent = tate === 'on' ? '横組' : '縦組';
-      btn.setAttribute('aria-pressed', tate === 'on' ? 'true' : 'false');
-      applyPrefs();
-      // 組み方向を変えると読んでいた場所を見失うので、今いる章の頭に戻す
-      requestAnimationFrame(function () {
-        resetTateScroll();
-        var here = currentChapter();
-        if (here) here.scrollIntoView({ block: 'start' });
-      });
+  function b64ToBytes(b64) {
+    var bin = atob(b64);
+    var out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+
+  /* 復号できたら平文、合言葉が違えば null を返す */
+  function decrypt(payload, pass) {
+    if (!window.crypto || !crypto.subtle) return Promise.reject(new Error('nocrypto'));
+    var enc = new TextEncoder();
+    return crypto.subtle
+      .importKey('raw', enc.encode(pass), 'PBKDF2', false, ['deriveKey'])
+      .then(function (base) {
+        return crypto.subtle.deriveKey(
+          { name: 'PBKDF2', salt: b64ToBytes(payload.salt), iterations: payload.iter, hash: 'SHA-256' },
+          base,
+          { name: 'AES-GCM', length: 256 },
+          false,
+          ['decrypt']
+        );
+      })
+      .then(function (key) {
+        return crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64ToBytes(payload.iv) }, key, b64ToBytes(payload.ct));
+      })
+      .then(function (buf) { return new TextDecoder().decode(buf); })
+      .catch(function () { return null; });
+  }
+
+  /* ---------- ページのデータ ---------- */
+  var dataEl = document.getElementById('bunko-data');
+  var DATA = null;
+  if (dataEl) { try { DATA = JSON.parse(dataEl.textContent); } catch (e) { DATA = null; } }
+
+  /* ============================================================
+     設定パネル（全ページ共通）
+     ============================================================ */
+  var panel = document.getElementById('panel');
+  var panelBtn = document.getElementById('panel-btn');
+
+  function syncPanel() {
+    if (!panel) return;
+    panel.querySelectorAll('[data-pref]').forEach(function (b) {
+      var key = b.getAttribute('data-pref');
+      var val = b.getAttribute('data-value');
+      var cur = String(prefs[key]);
+      b.setAttribute('aria-pressed', cur === val ? 'true' : 'false');
+    });
+  }
+
+  function openPanel(on) {
+    if (!panel || !panelBtn) return;
+    panel.hidden = !on;
+    panelBtn.setAttribute('aria-expanded', on ? 'true' : 'false');
+  }
+
+  if (panel && panelBtn) {
+    syncPanel();
+    panelBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      openPanel(panel.hidden);
+    });
+    panel.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var b = e.target.closest('[data-pref]');
+      if (!b) return;
+      var key = b.getAttribute('data-pref');
+      var val = b.getAttribute('data-value');
+      prefs[key] = key === 'size' ? Number(val) : val;
+      savePrefs();
+      // 作品ページのときだけ読書位置を取り直す（トップや試し読みには本文の面がない）
+      if (key === 'writing' && DATA && DATA.chapters) { negScroll = null; restoreScroll(false); }
+    });
+    document.addEventListener('click', function () { openPanel(false); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') openPanel(false); });
+  }
+
+  /* ============================================================
+     ここから先は作品ページだけ
+     ============================================================ */
+  if (!DATA || !DATA.chapters) { markUnlockedNav(); initIndexGate(); return; }
+
+  var SLUG = DATA.slug;
+  var CH = DATA.chapters;            // [{id,num,title,pov,free,html?}]
+  var unlocked = null;               // 解錠後: { id: html }
+  var view = document.getElementById('view');
+  var gateEl = document.getElementById('gate');
+  var tocEl = document.getElementById('toc');
+  var coverEl = document.getElementById('cover');
+  var sheet = document.getElementById('sheet');
+  var progressEl = document.querySelector('.progress');
+  var topTitle = document.getElementById('topbar-title');
+
+  function chapterHtml(i) {
+    var c = CH[i];
+    if (c.html) return c.html;
+    if (unlocked && unlocked[c.id]) return unlocked[c.id];
+    return null;
+  }
+  function isOpen(i) { return chapterHtml(i) !== null; }
+
+  /* ---------- 既読管理 ---------- */
+  function readSet() {
+    try { return new Set(JSON.parse(store.get(kRead(SLUG)) || '[]')); } catch (e) { return new Set(); }
+  }
+  function markRead(i) {
+    var s = readSet();
+    s.add(CH[i].id);
+    store.set(kRead(SLUG), JSON.stringify(Array.from(s)));
+  }
+
+  /* ---------- 目次の描画 ---------- */
+  function renderToc(target, current) {
+    var read = readSet();
+    var html = CH.map(function (c, i) {
+      var open = isOpen(i);
+      var cls = ['toc__item'];
+      if (!open) cls.push('is-locked');
+      if (read.has(c.id)) cls.push('is-read');
+      if (current === i) cls.push('is-current');
+      /* 章題のある作品は「章番号｜章題」、ない作品は章番号そのものを見出しにする */
+      var mark = '<span class="toc__mark">' + (open ? (read.has(c.id) ? '既読' : '') : '🔒') + '</span>';
+      var inner = c.title
+        ? '<span class="toc__num">' + esc(c.num) + '</span>' +
+          '<span class="toc__name">' + esc(c.title) +
+          (c.pov ? '<small>' + esc(DATA.povLabel + c.pov) + '</small>' : '') + '</span>' + mark
+        : '<span class="toc__name toc__name--num">' + esc(c.num) + '</span>' + mark;
+      return open
+        ? '<li class="' + cls.join(' ') + '"><a class="toc__link" href="#c' + (i + 1) + '">' + inner + '</a></li>'
+        : '<li class="' + cls.join(' ') + '"><span class="toc__link">' + inner + '</span></li>';
+    }).join('');
+    target.innerHTML = html;
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  /* ---------- 画面の切り替え ---------- */
+  var currentIndex = -1;   // -1 = 扉＋目次
+
+  function routeFromHash() {
+    var m = /^#c(\d+)$/.exec(location.hash);
+    if (!m) return -1;
+    var i = Number(m[1]) - 1;
+    return i >= 0 && i < CH.length ? i : -1;
+  }
+
+  function render() {
+    var i = routeFromHash();
+    currentIndex = i;
+    openSheet(false);
+
+    if (i < 0 || !isOpen(i)) {
+      if (i >= 0) { location.replace('#'); }
+      showCover();
       return;
     }
-    applyPrefs();
-  });
-
-  /* 縦組みの各章は横スクロールの面になる。切り替え直後は必ず1行目（右端）に戻す */
-  function resetTateScroll() {
-    document.querySelectorAll('.chapter-body').forEach(function (el) {
-      if (tate !== 'on') { el.scrollLeft = 0; return; }
-      var first = el.querySelector('p');
-      if (!first) { el.scrollLeft = 0; return; }
-      // 縦組みは右端が1行目。scrollLeft の原点はブラウザによって違う（0 起点／負の値）ので、
-      // 「1行目の右端」と「枠の右端」の差を測って合わせる。どちらの実装でも正しく効く。
-      el.scrollLeft += first.getBoundingClientRect().right - el.getBoundingClientRect().right;
-    });
+    showChapter(i);
   }
 
-  function currentChapter() {
-    var list = document.querySelectorAll('.chapter');
-    for (var i = 0; i < list.length; i++) {
-      var r = list[i].getBoundingClientRect();
-      if (r.bottom > 80) return list[i];
-    }
-    return list[list.length - 1] || null;
+  function showCover() {
+    if (coverEl) coverEl.hidden = false;
+    if (view) { view.hidden = true; view.innerHTML = ''; }
+    if (topTitle) topTitle.textContent = DATA.title;
+    if (tocEl) renderToc(tocEl, -1);
+    setProgress(0);
+    window.scrollTo(0, 0);
   }
 
-  // ボタンの初期ラベルを現在の設定に合わせる
-  document.querySelectorAll('[data-act="size"]').forEach(function (b) {
-    b.textContent = size === 'm' ? 'あ' : size === 'l' ? 'あ+' : 'あ++';
-  });
-  document.querySelectorAll('[data-act="theme"]').forEach(function (b) {
-    b.textContent = theme === 'auto' ? '自動' : theme === 'dark' ? '夜' : '昼';
-  });
-  document.querySelectorAll('[data-act="tate"]').forEach(function (b) {
-    b.textContent = tate === 'on' ? '横組' : '縦組';
-    b.setAttribute('aria-pressed', tate === 'on' ? 'true' : 'false');
-  });
-  document.querySelectorAll('[data-act="lang"]').forEach(function (b) {
-    b.textContent = lang === 'ja' ? 'EN' : '日本語';
-  });
+  function showChapter(i) {
+    var c = CH[i];
+    if (coverEl) coverEl.hidden = true;
+    if (!view) return;
+    view.hidden = false;
 
-  /* ---------- 読書進捗バー ---------- */
-  var bar = document.querySelector('.progress');
-  if (bar) {
-    var tick = function () {
-      var h = document.documentElement.scrollHeight - window.innerHeight;
-      bar.style.width = (h > 0 ? (window.scrollY / h) * 100 : 0) + '%';
-    };
-    window.addEventListener('scroll', tick, { passive: true });
-    window.addEventListener('resize', tick);
-    tick();
-  }
+    var prev = i > 0 && isOpen(i - 1) ? i - 1 : -1;
+    var next = i + 1 < CH.length && isOpen(i + 1) ? i + 1 : -1;
+    var last = i === CH.length - 1;
 
-  /* 縦組みの初期位置合わせ。試し読みページにはゲートが無いので、ここで先に済ませる */
-  if (tate === 'on') requestAnimationFrame(resetTateScroll);
+    view.innerHTML =
+      '<article class="chapter">' +
+        '<header class="chapter__head wrap">' +
+          '<div class="chapter__num">' + esc(c.num) + '</div>' +
+          (c.title ? '<h1 class="chapter__title">' + esc(c.title) + '</h1>' : '') +
+          (c.pov ? '<p class="chapter__pov">' + esc(DATA.povLabel + c.pov) + '</p>' : '') +
+          '<div class="chapter__rule"></div>' +
+        '</header>' +
+        '<p class="tate-note wrap">縦組みで表示しています。本文は右から左へ、横にスクロールしてお読みください。</p>' +
+        '<div class="chapter__body wrap">' + chapterHtml(i) + '</div>' +
+        (last
+          ? '<div class="fin wrap"><div class="fin__mark">了</div>' +
+            '<p class="fin__note">最後までお読みいただき、ありがとうございました。<br>' + esc(DATA.siteName) + '</p>' +
+            '<div class="fin__next"><a class="btn" href="../">ほかの作品を見る</a></div></div>'
+          : '') +
+        '<nav class="chapter__nav wrap">' +
+          (prev >= 0 ? '<a class="btn navprev" href="#c' + (prev + 1) + '">← 前の' + DATA.unit + '</a>' : '<span class="navprev"></span>') +
+          '<a class="btn btn--ghost navtoc" href="#">目次</a>' +
+          (next >= 0 ? '<a class="btn btn--primary navnext" href="#c' + (next + 1) + '">次の' + DATA.unit + ' →</a>' : '<span class="navnext"></span>') +
+        '</nav>' +
+      '</article>';
 
-  /* ---------- ここから合言葉ゲート ---------- */
-  var dataEl = document.getElementById('locked-data');
-  if (!dataEl) return;
-
-  var slug = document.body.getAttribute('data-slug') || 'work';
-  var LS_POS = 'bunko:pos:' + slug;
-  var payload = JSON.parse(dataEl.textContent);
-  var gate = document.querySelector('.gate');
-  var form = gate && gate.querySelector('.gate__form');
-  var input = gate && gate.querySelector('.gate__input');
-  var submit = gate && gate.querySelector('.gate__submit');
-  var msg = gate && gate.querySelector('.gate__msg');
-
-  function say(text, kind) {
-    if (!msg) return;
-    msg.textContent = text;
-    msg.className = 'gate__msg' + (kind ? ' is-' + kind : '');
-  }
-
-  if (!window.crypto || !window.crypto.subtle) {
-    say('この環境では本文を復号できません。https:// のページか、ローカルサーバー経由で開いてください（file:// では動きません）。', 'error');
-    if (submit) submit.disabled = true;
-    return;
-  }
-
-  async function deriveKey(pass) {
-    var enc = new TextEncoder();
-    var base = await crypto.subtle.importKey('raw', enc.encode(pass), 'PBKDF2', false, ['deriveKey']);
-    return crypto.subtle.deriveKey(
-      { name: 'PBKDF2', salt: b64ToBytes(payload.salt), iterations: payload.iter, hash: 'SHA-256' },
-      base,
-      { name: 'AES-GCM', length: 256 },
-      false,
-      ['decrypt']
-    );
-  }
-
-  async function tryUnlock(rawPass) {
-    var pass = normalizePass(rawPass);
-    if (!pass) { say('合言葉を入力してください。', 'error'); return false; }
-    var key = await deriveKey(pass);
-    var plain;
-    try {
-      plain = await crypto.subtle.decrypt(
-        { name: 'AES-GCM', iv: b64ToBytes(payload.iv) }, key, b64ToBytes(payload.ct)
-      );
-    } catch (e) {
-      return false; // 合言葉が違う（認証タグ不一致）
-    }
-    var html = JSON.parse(new TextDecoder().decode(plain));
-    reveal(html);
-    ls(function () { localStorage.setItem(LS_PASS, pass); });
-    return true;
-  }
-
-  function reveal(htmlByLang) {
-    document.querySelectorAll('[data-locked-mount]').forEach(function (mount) {
-      var l = mount.getAttribute('data-locked-mount');
-      if (htmlByLang[l]) {
-        mount.innerHTML = htmlByLang[l];
-        mount.classList.add('fade-in');
-      }
-    });
-    // 目次のロックを解除
-    document.querySelectorAll('.toc a.is-locked').forEach(function (a) {
-      a.classList.remove('is-locked');
-      a.setAttribute('href', a.getAttribute('data-href'));
-      var lock = a.querySelector('.toc__lock');
-      if (lock) lock.remove();
-    });
-    if (gate) gate.remove();
-    document.body.setAttribute('data-unlocked', 'true');
-    resetTateScroll(); // 差し込まれた章も1行目から始める
-    restorePosition();
-    startPositionSaver();
+    if (topTitle) topTitle.textContent = DATA.title + '　' + c.num + (c.title ? '　' + c.title : '');
+    markRead(i);
+    store.set(kPos(SLUG), String(i));
+    restoreScroll(true);
+    bindProgress();
+    // 明朝の読み込みで行数が変わるので、レイアウトが確定してからもう一度合わせる
+    var settle = function () { restoreScroll(true); };
+    setTimeout(settle, 0);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(settle);
   }
 
   /* ---------- 読書位置 ---------- */
-  function restorePosition() {
-    var raw = ls(function () { return localStorage.getItem(LS_POS); }, null);
-    if (!raw) return;
-    var id = raw;
-    var target = document.getElementById(id);
-    if (!target) return;
-    requestAnimationFrame(function () {
-      requestAnimationFrame(function () { target.scrollIntoView({ block: 'start' }); });
+  function bodyEl() { return view ? view.querySelector('.chapter__body') : null; }
+  var kScroll = function () { return 'bunko.scroll.' + SLUG + '.' + currentIndex + '.' + prefs.writing; };
+
+  /* 縦組み（vertical-rl）の scrollLeft の向きはエンジンによって2通りある。
+     ・0 が先頭で、左へ進むほどマイナス（Chrome / Firefox の現行仕様）
+     ・scrollWidth-clientWidth が先頭で、左へ進むほど 0 に近づく（旧実装）
+     どちらかを実測で判定する。判定しないと先頭が末尾になる。 */
+  var negScroll = null;
+  function detectScrollDir(el) {
+    var keep = el.scrollLeft;
+    el.scrollLeft = -1;
+    negScroll = el.scrollLeft < 0;
+    el.scrollLeft = keep;
+  }
+  function vStart(el) { return negScroll ? 0 : el.scrollWidth - el.clientWidth; }
+
+  function restoreScroll(fresh) {
+    var el = bodyEl();
+    if (currentIndex < 0) return;
+    var saved = store.get(kScroll());
+    if (prefs.writing === 'vertical' && el) {
+      if (negScroll === null) detectScrollDir(el);
+      el.scrollLeft = saved === null ? vStart(el) : Number(saved);
+      if (!fresh) window.scrollTo(0, 0);
+    } else {
+      window.scrollTo(0, fresh ? Number(saved || 0) : window.scrollY);
+    }
+    updateProgress();
+  }
+
+  function setProgress(p) {
+    if (progressEl) progressEl.style.width = Math.max(0, Math.min(1, p)) * 100 + '%';
+  }
+
+  function updateProgress() {
+    if (currentIndex < 0) { setProgress(0); return; }
+    var el = bodyEl();
+    if (prefs.writing === 'vertical' && el) {
+      var max = el.scrollWidth - el.clientWidth;
+      if (max <= 0) { setProgress(1); return; }
+      if (negScroll === null) detectScrollDir(el);
+      var sl = el.scrollLeft;
+      setProgress(negScroll ? -sl / max : (max - sl) / max);
+      store.set(kScroll(), String(sl));
+    } else {
+      var h = document.documentElement.scrollHeight - window.innerHeight;
+      setProgress(h > 0 ? window.scrollY / h : 1);
+      store.set(kScroll(), String(window.scrollY));
+    }
+  }
+
+  /* 進捗の更新はスクロールごとに間引く。requestAnimationFrame は
+     タブが裏に回ると止まるため、時刻で間引く方式にしてある。 */
+  var lastTick = 0, tickTimer = null;
+  function onScroll() {
+    var now = Date.now();
+    if (now - lastTick > 80) { lastTick = now; updateProgress(); return; }
+    clearTimeout(tickTimer);
+    tickTimer = setTimeout(function () { lastTick = Date.now(); updateProgress(); }, 80);
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll, { passive: true });
+
+  function bindProgress() {
+    var el = bodyEl();
+    if (el) el.addEventListener('scroll', onScroll, { passive: true });
+  }
+
+  /* ---------- 目次シート ---------- */
+  var sheetBtn = document.getElementById('sheet-btn');
+  function openSheet(on) {
+    if (!sheet) return;
+    if (on) renderToc(sheet.querySelector('.toc__list'), currentIndex);
+    sheet.hidden = !on;
+    if (sheetBtn) sheetBtn.setAttribute('aria-expanded', on ? 'true' : 'false');
+    document.body.style.overflow = on ? 'hidden' : '';
+  }
+  if (sheetBtn) {
+    sheetBtn.addEventListener('click', function (e) { e.stopPropagation(); openSheet(sheet.hidden); });
+  }
+  if (sheet) {
+    sheet.addEventListener('click', function (e) {
+      if (e.target.closest('.sheet__scrim') || e.target.closest('[data-close]') || e.target.closest('a')) openSheet(false);
     });
   }
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') openSheet(false);
+    if (e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
+    if (currentIndex < 0) return;
+    if (e.key === 'ArrowRight' && currentIndex + 1 < CH.length && isOpen(currentIndex + 1)) location.hash = '#c' + (currentIndex + 2);
+    if (e.key === 'ArrowLeft' && currentIndex > 0 && isOpen(currentIndex - 1)) location.hash = '#c' + currentIndex;
+  });
 
-  function startPositionSaver() {
-    var chapters = Array.prototype.slice.call(document.querySelectorAll('.chapter[id]'));
-    if (!chapters.length) return;
-    var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (e) {
-        if (e.isIntersecting) ls(function () { localStorage.setItem(LS_POS, e.target.id); });
-      });
-    }, { rootMargin: '-45% 0px -45% 0px' });
-    chapters.forEach(function (c) { io.observe(c); });
-  }
-
-  /* ---------- 初期化：保存済みの合言葉で自動解錠 ---------- */
-  var saved = ls(function () { return localStorage.getItem(LS_PASS); }, null);
-  if (saved) {
-    tryUnlock(saved).then(function (ok) {
-      if (!ok) ls(function () { localStorage.removeItem(LS_PASS); });
-    });
-  }
-
-  if (form) {
-    form.addEventListener('submit', async function (ev) {
-      ev.preventDefault();
-      submit.disabled = true;
-      say('確認しています…');
-      var ok = await tryUnlock(input.value);
-      if (!ok) {
-        submit.disabled = false;
-        say('合言葉が違うようです。カードの表記どおりに入力してください。', 'error');
-        input.select();
+  /* ---------- ゲート ---------- */
+  function reveal(plain) {
+    try { unlocked = JSON.parse(plain); } catch (e) { return false; }
+    if (gateEl) gateEl.hidden = true;
+    var cont = document.getElementById('continue');
+    if (cont) {
+      var last = Number(store.get(kPos(SLUG)) || -1);
+      if (last >= 0 && last < CH.length) {
+        cont.hidden = false;
+        cont.innerHTML = '<a class="btn btn--primary btn--block" href="#c' + (last + 1) + '">' +
+          esc(CH[last].num) + ' から読む</a>';
       }
+    }
+    render();
+    return true;
+  }
+
+  function initGate() {
+    if (!DATA.payload) { render(); return; }
+    var form = gateEl ? gateEl.querySelector('.gate__form') : null;
+    var input = gateEl ? gateEl.querySelector('.gate__input') : null;
+    var msg = gateEl ? gateEl.querySelector('.gate__msg') : null;
+
+    function say(text, isError) {
+      if (!msg) return;
+      msg.textContent = text;
+      msg.classList.toggle('is-error', !!isError);
+    }
+
+    function tryPass(raw, silent) {
+      var pass = normalizePass(raw);
+      if (!pass) { if (!silent) say('合言葉を入力してください。', true); return Promise.resolve(false); }
+      if (!silent) say('確認しています…', false);
+      return decrypt(DATA.payload, pass).then(function (plain) {
+        if (plain && reveal(plain)) {
+          store.set(K_PASS, raw);
+          if (!silent) say('', false);
+          return true;
+        }
+        if (!silent) say('合言葉が違うようです。カードの裏をもう一度お確かめください。', true);
+        return false;
+      }).catch(function () {
+        if (!silent) say('この環境では解錠できませんでした。別のブラウザでお試しください。', true);
+        return false;
+      });
+    }
+
+    if (form) {
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        tryPass(input ? input.value : '', false);
+      });
+    }
+
+    var saved = store.get(K_PASS);
+    if (saved) {
+      tryPass(saved, true).then(function (ok) {
+        if (!ok) { store.del(K_PASS); render(); }
+      });
+    } else {
+      render();
+    }
+  }
+
+  window.addEventListener('hashchange', render);
+  initGate();
+
+  /* ============================================================
+     トップページ側のゲート（作品ページ以外）
+     ============================================================ */
+  function initIndexGate() {
+    var g = document.getElementById('gate');
+    if (!g || !DATA || !DATA.verifier) return;
+    var form = g.querySelector('.gate__form');
+    var input = g.querySelector('.gate__input');
+    var msg = g.querySelector('.gate__msg');
+
+    function done() {
+      g.classList.add('is-unlocked');
+      if (msg) { msg.textContent = '解錠しました。どの作品も最後まで読めます。'; msg.classList.remove('is-error'); }
+      markUnlockedNav();
+    }
+    if (store.get(K_PASS)) done();
+    if (!form) return;
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var raw = input ? input.value : '';
+      if (msg) { msg.textContent = '確認しています…'; msg.classList.remove('is-error'); }
+      decrypt(DATA.verifier, normalizePass(raw)).then(function (plain) {
+        if (plain === 'ok') { store.set(K_PASS, raw); done(); }
+        else if (msg) { msg.textContent = '合言葉が違うようです。カードの裏をもう一度お確かめください。'; msg.classList.add('is-error'); }
+      });
     });
+  }
+
+  function markUnlockedNav() {
+    if (store.get(K_PASS)) document.body.classList.add('has-pass');
   }
 })();
