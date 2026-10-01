@@ -1,0 +1,11 @@
+{
+  "name": "作品一覧",
+  "short_name": "作品一覧",
+  "description": "",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "lang": "ja"
+}

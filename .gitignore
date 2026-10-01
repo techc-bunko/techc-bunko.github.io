@@ -1,0 +1,19 @@
+node_modules/
+.DS_Store
+Thumbs.db
+.claude/
+
+# 原稿そのもの。このリポジトリは GitHub Pages で公開されるため、
+# src/raw を push すると本文が平文で読まれ、カードを売る意味がなくなる。
+# 公開してよいのは docs/（AES-GCM で暗号化済み）だけ。
+# → src/raw は手元だけに置き、別途バックアップを取ること。
+src/raw/
+
+# 本文の鍵。これが漏れると全作品が読まれる。
+src/keys/*.key
+
+# 印刷用のコード一覧（秘密そのもの）
+codes/
+
+# 名刺の版下（コードを刷り込むので公開しない）
+cards/

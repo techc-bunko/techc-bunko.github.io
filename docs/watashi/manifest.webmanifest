@@ -1,0 +1,11 @@
+{
+  "name": "私が、私になる日",
+  "short_name": "私が、私になる日",
+  "description": "家族・自立の物語",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "lang": "ja"
+}

@@ -1,0 +1,11 @@
+{
+  "name": "劣等感は味方",
+  "short_name": "劣等感は味方",
+  "description": "お仕事・成長小説",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "lang": "ja"
+}

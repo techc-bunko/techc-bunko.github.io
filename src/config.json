@@ -1,0 +1,51 @@
+{
+  "siteUrl": "https://techc-bunko.github.io",
+  "siteName": "",
+  "author": "tech.C",
+  "works": [
+    {
+      "slug": "rettoukan",
+      "path": "rettoukan",
+      "accent": "#3f7f8c",
+      "colorName": "浅葱色",
+      "genre": "お仕事・成長小説",
+      "unit": "話",
+      "tagline": "",
+      "notice": "",
+      "cardCatch": "その劣等感、お前の敵じゃない。",
+      "synopsis": [
+        "劣等感を抱えた人が自分の劣等感と向き合っていく物語"
+      ]
+    },
+    {
+      "slug": "kokoro",
+      "path": "kokoro",
+      "accent": "#6a5a8c",
+      "colorName": "菫色",
+      "genre": "ヒューマンドラマ",
+      "unit": "章",
+      "tagline": "自分でも認めたくない感情を抱いてしまった人が、それでも生きていくための物語",
+      "notice": "性的な内容を示唆する表現を含みます",
+      "cardCatch": "その罪に、時効はあるのか。",
+      "synopsis": [
+        "自分でも認めたくない感情を抱いてしまった人が、それでも生きていくための物語"
+      ]
+    },
+    {
+      "slug": "watashi",
+      "path": "watashi",
+      "accent": "#b07030",
+      "colorName": "琥珀色",
+      "genre": "家族・自立の物語",
+      "unit": "章",
+      "tagline": "私は三回、自分を殺した。",
+      "notice": "",
+      "cardCatch": "私は三回、自分を殺した。",
+      "synopsis": [
+        "名門政治家一族に生まれた少女は、幼い頃から「娘」という理由で価値を否定され続けてきた。",
+        "兄たちからの虐待、家名のためだけに求められる優秀さ、自分の意思を持つことすら許されない人生。彼女は生き延びるために何度も自分の心を殺してきた。",
+        "そんな少女が自分の心の本当の声に気づく物語。"
+      ]
+    }
+  ]
+}
