@@ -2,6 +2,8 @@
   "siteUrl": "https://techc-bunko.github.io",
   "siteName": "",
   "author": "tech.C",
+  "locked": false,
+  "noindex": true,
   "works": [
     {
       "slug": "rettoukan",

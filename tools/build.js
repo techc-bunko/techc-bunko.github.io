@@ -37,6 +37,10 @@ const DOCS = path.join(ROOT, 'docs');
 /* 確認用に施錠を外して組むフラグ。本番ビルドでは絶対に付けない */
 const UNLOCKED = process.argv.includes('--unlocked');
 
+/* 検索避け。URLを知らない人が偶然たどり着くのを防ぐだけで、
+   URLを知っている人は誰でも読める。鍵の代わりにはならない。 */
+const NOINDEX = (cfg) => (cfg.noindex ? '\n<meta name="robots" content="noindex, nofollow">' : '');
+
 /* ============================================================
    原稿を読む
    ============================================================ */
@@ -305,7 +309,7 @@ function buildIndex(cfg, built) {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(siteName)}</title>
 <meta name="description" content="${esc(desc)}">
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#ffffff">${NOINDEX(cfg)}
 ${ogpTags(cfg, { path: '' }, { title: siteName, desc })}
 ${FONTS}
 <link rel="stylesheet" href="./assets/style.css">
@@ -376,7 +380,7 @@ function buildPage(work, meta, cfg, outDir) {
   const wrapFile = path.join(SRC, 'keys', meta.slug + '.json');
   /* --unlocked は手元で読んで確かめるためだけのもの。
      本文が平文で docs/ に出るので、この状態のまま push しないこと。 */
-  const locked = !UNLOCKED && fs.existsSync(keyFile) && fs.existsSync(wrapFile);
+  const locked = cfg.locked !== false && !UNLOCKED && fs.existsSync(keyFile) && fs.existsSync(wrapFile);
 
   const full = chapters.map((c) => ({ id: c.id, num: c.num, title: c.title || '', html: chapterBody(c) }));
 
@@ -434,7 +438,7 @@ function buildPage(work, meta, cfg, outDir) {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(desc)}">
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#ffffff">${NOINDEX(cfg)}
 <link rel="manifest" href="./manifest.webmanifest">
 ${ogpTags(cfg, meta, { title, desc })}
 ${FONTS}
@@ -585,6 +589,9 @@ self.addEventListener('fetch', function (e) {
 
   fs.mkdirSync(DOCS, { recursive: true });
   fs.writeFileSync(path.join(DOCS, '.nojekyll'), '');
+  if (fs.existsSync(path.join(SRC, 'robots.txt'))) {
+    fs.copyFileSync(path.join(SRC, 'robots.txt'), path.join(DOCS, 'robots.txt'));
+  }
 
   const built = [];
 
