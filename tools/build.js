@@ -267,14 +267,20 @@ function footer(cfg, title) {
    どの作品も path を持つとき（= ルートが空くとき）だけ作る。
    QR は作品ごとに配るので、ここは主に「URL を削ってドメインだけ
    打った人」と「4作目以降を足したとき」の受け皿。
+
+   opt で置き場所を変えられる。まとめ売り用の入口（collections）は
+   docs/<path>/ に同じ形の一覧を置き、作品へは一つ上へ戻ってから入る。
    ============================================================ */
-function buildIndex(cfg, built) {
-  const siteName = cfg.siteName || '作品一覧';
+function buildIndex(cfg, all, opt = {}) {
+  const outDir = opt.outDir || DOCS;
+  const hrefBase = opt.hrefBase || './';
+  const siteName = opt.siteName || cfg.siteName || '作品一覧';
+  const built = opt.only ? opt.only.map((s) => all.find((b) => b.meta.slug === s)).filter(Boolean) : all;
 
   const cards = built
     .map(({ meta, title, chapters }) => {
       const unit = meta.unit || '章';
-      return `      <a class="card a-${esc(meta.slug)}" href="./${esc(meta.path)}/">
+      return `      <a class="card a-${esc(meta.slug)}" href="${esc(hrefBase)}${esc(meta.path)}/">
         <div class="card__meta">
           <span class="card__color">${esc(meta.colorName)}</span>
           <span>${esc(meta.genre)}</span>
@@ -310,7 +316,7 @@ function buildIndex(cfg, built) {
 <title>${esc(siteName)}</title>
 <meta name="description" content="${esc(desc)}">
 <meta name="theme-color" content="#ffffff">${NOINDEX(cfg)}
-${ogpTags(cfg, { path: '' }, { title: siteName, desc })}
+${ogpTags(cfg, { path: opt.path || '' }, { title: siteName, desc })}
 ${FONTS}
 <link rel="stylesheet" href="./assets/style.css">
 <style>
@@ -352,7 +358,7 @@ ${SW_REGISTER}
 </html>
 `;
 
-  fs.writeFileSync(path.join(DOCS, 'index.html'), html);
+  fs.writeFileSync(path.join(outDir, 'index.html'), html);
   return Buffer.byteLength(html);
 }
 
@@ -653,6 +659,34 @@ self.addEventListener('fetch', function (e) {
       .slice(0, 8);
     buildOffline(indexMeta, cfg.siteName || '作品一覧', version, DOCS);
     console.log(`    offline → yomi-index-${version}`);
+  }
+
+  /* まとめ売り用の入口。収録作のカードだけを並べた一覧を docs/<path>/ に置く。
+     本文は持たない。カードから各作品のページへ入る。 */
+  for (const col of cfg.collections || []) {
+    const outDir = path.join(DOCS, col.path);
+    fs.mkdirSync(path.join(outDir, 'assets'), { recursive: true });
+    for (const f of ['style.css', 'reader.js']) {
+      fs.copyFileSync(path.join(SRC, 'assets', f), path.join(outDir, 'assets', f));
+    }
+
+    const bytes = buildIndex(cfg, built, {
+      outDir,
+      path: col.path,
+      siteName: col.name,
+      hrefBase: '../',
+      only: col.includes,
+    });
+    console.log(`  ${col.name}  ${col.includes.length}篇 → docs/${col.path}/index.html (${(bytes / 1024).toFixed(0)} KB)`);
+
+    const version = createHash('sha1')
+      .update(fs.readFileSync(path.join(outDir, 'index.html')))
+      .update(fs.readFileSync(path.join(outDir, 'assets', 'style.css')))
+      .update(fs.readFileSync(path.join(outDir, 'assets', 'reader.js')))
+      .digest('hex')
+      .slice(0, 8);
+    buildOffline({ slug: col.slug, genre: '' }, col.name, version, outDir);
+    console.log(`    offline → yomi-${col.slug}-${version}`);
   }
 
   console.log('\n完成。docs/ を GitHub Pages に置けば公開できる。');

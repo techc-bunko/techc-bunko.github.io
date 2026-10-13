@@ -175,8 +175,18 @@ ${pages.join('\n')}
   const rows = [];
   let allOk = true;
 
-  for (const meta of cfg.works) {
-    const { title, chapters } = readWork(meta.slug);
+  /* 作品ごとの1枚に加えて、まとめ売り用の入口（collections）の1枚も作る。
+     入口は本文を持たないので、原稿ではなく収録作の数を刷る。 */
+  const targets = [
+    ...cfg.works.map((meta) => ({ meta, ...readWork(meta.slug) })),
+    ...(cfg.collections || []).map((col) => ({
+      meta: { ...col, unit: '篇' },
+      title: col.name,
+      chapters: col.includes.length,
+    })),
+  ];
+
+  for (const { meta, title, chapters } of targets) {
     const url = base + '/' + (meta.path ? meta.path + '/' : '');
 
     const v = await verifyQr(url);
