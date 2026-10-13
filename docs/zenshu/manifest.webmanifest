@@ -1,0 +1,11 @@
+{
+  "name": "劣等感は味方／心の罪／私が、私になる日",
+  "short_name": "劣等感は味方／心の罪／私が、私になる日",
+  "description": "短編集",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "lang": "ja"
+}

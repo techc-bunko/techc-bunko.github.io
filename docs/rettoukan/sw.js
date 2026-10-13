@@ -1,7 +1,7 @@
 /* オフライン用 Service Worker（自動生成：手で編集しない） */
 'use strict';
 var NS = 'yomi-rettoukan-';
-var V = NS + '189c0f57';
+var V = NS + '79cf5a1c';
 var PRECACHE = [
   "./",
   "./index.html",
