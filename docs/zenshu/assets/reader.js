@@ -112,6 +112,7 @@
   /* 施錠されているあいだは目次だけ持つ。解錠すると本文入りに差し替わる */
   var CH = DATA.chapters || DATA.toc || [];
   var LOCKED = !!DATA.locked;
+  var FEEDBACK = DATA.feedbackUrl || '';
   var view = document.getElementById('view');
   var tocEl = document.getElementById('toc');
   var coverEl = document.getElementById('cover');
@@ -216,7 +217,13 @@
         '</div>' +
         (last
           ? '<div class="fin wrap"><div class="fin__mark">了</div>' +
-            '<p class="fin__note">最後までお読みいただき、ありがとうございました。</p></div>'
+            '<p class="fin__note">最後までお読みいただき、ありがとうございました。</p>' +
+            /* 感想フォームは config.json に feedbackUrl を書いたときだけ出る */
+            (FEEDBACK
+              ? '<p class="fin__act"><a class="btn btn--primary" href="' + esc(FEEDBACK) +
+                '" target="_blank" rel="noopener">感想を送る</a></p>'
+              : '') +
+            '</div>'
           : '') +
         '<nav class="chapter__nav wrap">' +
           (prev >= 0 ? '<a class="btn navprev" href="#c' + (prev + 1) + '">← 前の' + DATA.unit + '</a>' : '<span class="navprev"></span>') +
@@ -287,6 +294,37 @@
       setProgress(h > 0 ? window.scrollY / h : 1);
       store.set(kScroll(), String(window.scrollY));
     }
+    updateToTop();
+  }
+
+  /* ---------- 先頭へ戻る ---------- */
+  /* 長い章をスマホで読むとき、指で戻すのは大変なので右下に出す。
+     縦組みは横スクロールなので、戻す先は scrollLeft の先頭になる。 */
+  var toTopEl = document.getElementById('to-top');
+
+  function toTopAway() {
+    var el = bodyEl();
+    if (prefs.writing === 'vertical' && el) {
+      if (negScroll === null) detectScrollDir(el);
+      return Math.abs(el.scrollLeft - vStart(el));
+    }
+    return window.scrollY;
+  }
+
+  function updateToTop() {
+    if (!toTopEl) return;
+    toTopEl.hidden = currentIndex < 0 || toTopAway() < 500;
+  }
+
+  if (toTopEl) {
+    toTopEl.addEventListener('click', function () {
+      var el = bodyEl();
+      if (prefs.writing === 'vertical' && el) {
+        if (negScroll === null) detectScrollDir(el);
+        el.scrollTo({ left: vStart(el), behavior: 'smooth' });
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
   }
 
   /* 進捗の更新はスクロールごとに間引く。requestAnimationFrame は

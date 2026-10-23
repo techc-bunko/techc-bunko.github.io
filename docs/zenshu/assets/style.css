@@ -269,6 +269,7 @@ button { font: inherit; color: inherit; }
   color: var(--accent); padding-left: .3em;
 }
 .fin__note { margin: 1rem 0 0; font-size: .8125rem; line-height: 2; color: var(--ink-3); }
+.fin__act { margin: 1.6rem 0 0; }
 
 /* ---------- 縦組み ----------
    見出しから本文までを一枚の面（.chapter__stage）にまとめ、その面ごと
@@ -384,11 +385,27 @@ button { font: inherit; color: inherit; }
 
 /* ---------- 目次シート（本文中から開く） ---------- */
 .sheet[hidden] { display: none !important; }
+/* 先頭へ戻る。右下に固定。iPhone のホームバーに重ならないよう余白を足す */
+.to-top {
+  position: fixed; z-index: 65;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: calc(1rem + env(safe-area-inset-bottom));
+  width: 3rem; height: 3rem; border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--bg); color: var(--accent);
+  font-size: 1.125rem; line-height: 1; cursor: pointer;
+  box-shadow: 0 2px 12px rgba(15, 15, 20, .14);
+}
+.to-top[hidden] { display: none; }
+.to-top:hover { background: var(--bg-soft); }
+
 .sheet { position: fixed; inset: 0; z-index: 70; }
 .sheet__scrim { position: absolute; inset: 0; background: rgba(15,15,20,.4); border: 0; width: 100%; cursor: pointer; }
 .sheet__panel {
   position: absolute; right: 0; top: 0; bottom: 0;
-  width: min(24rem, 92vw); padding: 1.25rem 1.25rem 2rem;
+  width: min(24rem, 92vw);
+  /* 下はホームバーのぶんを足す。足さないと最後の章がバーに隠れる */
+  padding: 1.25rem 1.25rem calc(2rem + env(safe-area-inset-bottom));
   background: var(--bg); border-left: 1px solid var(--line);
   overflow-y: auto; overscroll-behavior: contain;
 }

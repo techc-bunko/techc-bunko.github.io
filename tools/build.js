@@ -150,7 +150,7 @@ const FONTS =
   '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
   '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600&display=swap">';
 
-function ogpTags(cfg, meta, { title, desc }) {
+function ogpTags(cfg, meta, { title, desc, image }) {
   const base = String(cfg.siteUrl || '').replace(/\/+$/, '');
   const lines = [
     '<meta property="og:type" content="article">',
@@ -160,12 +160,61 @@ function ogpTags(cfg, meta, { title, desc }) {
   if (base) {
     const url = base + '/' + (meta.path ? meta.path + '/' : '');
     lines.push(`<meta property="og:url" content="${esc(url)}">`);
-    lines.push('<meta name="twitter:card" content="summary">');
+    /* og:image は絶対URLでないと読まれない。相対パスだと LINE などで出ない */
+    if (image) {
+      lines.push(`<meta property="og:image" content="${esc(url + image)}">`);
+      lines.push('<meta property="og:image:width" content="1200">');
+      lines.push('<meta property="og:image:height" content="630">');
+    }
+    lines.push(`<meta name="twitter:card" content="${image ? 'summary_large_image' : 'summary'}">`);
     lines.push(`<meta name="twitter:title" content="${esc(title)}">`);
     lines.push(`<meta name="twitter:description" content="${esc(desc)}">`);
+    if (image) lines.push(`<meta name="twitter:image" content="${esc(url + image)}">`);
   }
   return lines.join('\n');
 }
+
+/* ------------------------------------------------------------
+   ファビコンと OGP 画像
+   ファビコンは作品の色の丸。タブに並べたときに見分けがつく。
+   OGP画像は src/ogp/<slug>.png があればそれを og.png として置く。
+   無ければ何もしない（python tools/make-ogp.py で作る）。
+   ------------------------------------------------------------ */
+function writeIcon(outDir, accent) {
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">' +
+    '<rect width="32" height="32" rx="7" fill="#ffffff"/>' +
+    `<circle cx="16" cy="16" r="8" fill="${accent}"/>` +
+    '</svg>\n';
+  fs.writeFileSync(path.join(outDir, 'favicon.svg'), svg);
+}
+
+function copyOgp(slug, outDir) {
+  const src = path.join(SRC, 'ogp', slug + '.png');
+  if (!fs.existsSync(src)) return '';
+  fs.copyFileSync(src, path.join(outDir, 'og.png'));
+  return 'og.png';
+}
+
+/* ホーム画面に追加したときのアイコン。src/icons/<slug>-<辺>.png を置く。
+   無ければ何もしない（python tools/make-icons.py で作る）。 */
+const ICON_SIZES = [180, 192, 512];
+
+function copyIcons(slug, outDir) {
+  const got = [];
+  for (const s of ICON_SIZES) {
+    const src = path.join(SRC, 'icons', `${slug}-${s}.png`);
+    if (!fs.existsSync(src)) continue;
+    fs.copyFileSync(src, path.join(outDir, `icon-${s}.png`));
+    got.push(s);
+  }
+  return got;
+}
+
+const ICON_LINK = '<link rel="icon" href="./favicon.svg" type="image/svg+xml">';
+/* iOS は manifest の icons を見ない。apple-touch-icon を別に書く必要がある */
+const appleIconLink = (sizes) =>
+  sizes.includes(180) ? '\n<link rel="apple-touch-icon" href="./icon-180.png">' : '';
 
 /* updateViaCache:'none' は sw.js 自体を HTTP キャッシュから読ませないための指定。
    既定でも本体はキャッシュを迂回するが、明示しておかないと環境によっては
@@ -253,6 +302,12 @@ function tocSheet() {
 </div>`;
 }
 
+/* 長い章をスマホで読むとき、先頭まで指で戻すのは大変。
+   少しスクロールしたら右下に出す。縦組みのときは横スクロールの先頭へ戻す。 */
+function toTopBtn() {
+  return `<button class="to-top" id="to-top" type="button" hidden aria-label="先頭へ戻る">↑</button>`;
+}
+
 function footer(cfg, title) {
   return `<footer class="foot">
   <div class="wrap">
@@ -306,6 +361,10 @@ function buildIndex(cfg, all, opt = {}) {
     })
     .join('\n');
 
+  writeIcon(outDir, (built[0] && built[0].meta.accent) || '#3f7f8c');
+  const ogImage = copyOgp(opt.slug || 'index', outDir);
+  const appleIcon = appleIconLink(copyIcons(opt.slug || 'index', outDir));
+
   const desc = built.map((b) => b.title).join('／') + ' — ' + cfg.author + 'のオリジナル短編。全編無料。';
 
   const html = `<!doctype html>
@@ -316,7 +375,8 @@ function buildIndex(cfg, all, opt = {}) {
 <title>${esc(siteName)}</title>
 <meta name="description" content="${esc(desc)}">
 <meta name="theme-color" content="#ffffff">${NOINDEX(cfg)}
-${ogpTags(cfg, { path: opt.path || '' }, { title: siteName, desc })}
+${ICON_LINK}${appleIcon}
+${ogpTags(cfg, { path: opt.path || '' }, { title: siteName, desc, image: ogImage })}
 ${FONTS}
 <link rel="stylesheet" href="./assets/style.css">
 <style>
@@ -363,6 +423,55 @@ ${SW_REGISTER}
 }
 
 /* ============================================================
+   404 ページ
+   GitHub Pages は無い URL のとき docs/404.html を返す。
+   打ち間違いや、QRを読み違えたときの受け皿。
+   ルート直下に置かれるので、素材は絶対パスで指す。
+   ============================================================ */
+function build404(cfg) {
+  const html = `<!doctype html>
+<html lang="ja" data-theme="light" data-size="2" data-font="mincho" data-writing="horizontal">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ページが見つかりません</title>
+<meta name="theme-color" content="#ffffff">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+${FONTS}
+<link rel="stylesheet" href="/assets/style.css">
+${THEME_BOOT}
+</head>
+<body class="top-page">
+<header class="topbar">
+  <div class="topbar__in">
+    <a class="topbar__home" href="/">${esc(cfg.siteName || '作品一覧')}</a>
+  </div>
+</header>
+<main>
+  <section class="hero wrap">
+    <h1 class="hero__title">ページが見つかりません</h1>
+  </section>
+  <section class="wrap">
+    <p>お探しのページはありません。URLの打ち間違いか、作品が移動した可能性があります。</p>
+    <p>QRコードを読み取った場合は、もう一度読み取ってみてください。</p>
+    <p><a href="/">作品一覧へ</a></p>
+  </section>
+</main>
+<footer class="foot">
+  <div class="wrap">
+    <p>掲載作品はすべて${esc(cfg.author)}によるオリジナルです。<br>
+    無断転載・二次配布はご遠慮ください。</p>
+  </div>
+</footer>
+</body>
+</html>
+`;
+  fs.writeFileSync(path.join(DOCS, '404.html'), html);
+  return Buffer.byteLength(html);
+}
+
+/* ============================================================
    施錠
    本文は作品ごとの鍵（CK）で AES-GCM 暗号化して置く。
    CK 自体はカードのコードで包んであり、その包みは公開してよい。
@@ -405,9 +514,10 @@ function buildPage(work, meta, cfg, outDir) {
       enc: lockPayload(ck, full),
       /* 目次だけは伏せない。何章あるか見えたほうが買う判断がしやすい */
       toc: chapters.map((c) => ({ id: c.id, num: c.num, title: c.title || '' })),
+      feedbackUrl: cfg.feedbackUrl || '',
     };
   } else {
-    data = { slug: meta.slug, title: work.title, unit, chapters: full };
+    data = { slug: meta.slug, title: work.title, unit, chapters: full, feedbackUrl: cfg.feedbackUrl || '' };
   }
 
   const cover = `<div id="cover">
@@ -434,6 +544,10 @@ function buildPage(work, meta, cfg, outDir) {
   </section>
 </div>`;
 
+  writeIcon(outDir, meta.accent);
+  const ogImage = copyOgp(meta.slug, outDir);
+  const appleIcon = appleIconLink(copyIcons(meta.slug, outDir));
+
   const title = work.title;
   const desc = meta.tagline || `${title} — ${meta.genre}。全${chapters.length}${unit}。`;
 
@@ -446,7 +560,8 @@ function buildPage(work, meta, cfg, outDir) {
 <meta name="description" content="${esc(desc)}">
 <meta name="theme-color" content="#ffffff">${NOINDEX(cfg)}
 <link rel="manifest" href="./manifest.webmanifest">
-${ogpTags(cfg, meta, { title, desc })}
+${ICON_LINK}${appleIcon}
+${ogpTags(cfg, meta, { title, desc, image: ogImage })}
 ${FONTS}
 <link rel="stylesheet" href="./assets/style.css">
 <style>
@@ -463,6 +578,7 @@ ${cover}
 ${footer(cfg, title)}
 ${settingsPanel()}
 ${tocSheet()}
+${toTopBtn()}
 <script type="application/json" id="yomi-data">${jsonForScript(data)}</script>
 <script src="./assets/reader.js" defer></script>
 ${SW_REGISTER}
@@ -568,6 +684,12 @@ self.addEventListener('fetch', function (e) {
     background_color: '#ffffff',
     theme_color: '#ffffff',
     lang: 'ja',
+    icons: ICON_SIZES.filter((s) => fs.existsSync(path.join(outDir, `icon-${s}.png`))).map((s) => ({
+      src: `./icon-${s}.png`,
+      sizes: `${s}x${s}`,
+      type: 'image/png',
+      purpose: 'any',
+    })),
   };
   fs.writeFileSync(path.join(outDir, 'manifest.webmanifest'), JSON.stringify(manifest, null, 2));
 }
@@ -659,6 +781,9 @@ self.addEventListener('fetch', function (e) {
       .slice(0, 8);
     buildOffline(indexMeta, cfg.siteName || '作品一覧', version, DOCS);
     console.log(`    offline → yomi-index-${version}`);
+
+    const b404 = build404(cfg);
+    console.log(`  404ページ → docs/404.html (${(b404 / 1024).toFixed(0)} KB)`);
   }
 
   /* まとめ売り用の入口。収録作のカードだけを並べた一覧を docs/<path>/ に置く。
@@ -674,6 +799,7 @@ self.addEventListener('fetch', function (e) {
       outDir,
       path: col.path,
       siteName: col.name,
+      slug: col.slug,
       hrefBase: '../',
       only: col.includes,
     });
