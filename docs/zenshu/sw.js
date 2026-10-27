@@ -1,7 +1,7 @@
 /* オフライン用 Service Worker（自動生成：手で編集しない） */
 'use strict';
 var NS = 'yomi-zenshu-';
-var V = NS + 'f4283640';
+var V = NS + 'a703050c';
 var PRECACHE = [
   "./",
   "./index.html",

@@ -206,6 +206,10 @@ button { font: inherit; color: inherit; }
    扉は本文から戻るたびに hidden が外れるので、そのたびに最初から動く。
    後ろでは作品の色の小さな粒がゆっくり舞う（扉だけ。本文では舞わない）。 */
 .cover { position: relative; isolation: isolate; }
+/* 粒の層は画面の端まで広げている（100vw）。パソコンでは 100vw に縦の
+   スクロールバーの幅も入るので、そのままだと横にはみ出してスクロールバーが出る。
+   扉の外側で切っておく */
+#cover { overflow-x: hidden; overflow-x: clip; }
 .cover__vline {
   width: 1.5px; height: 3.25rem; margin: 1.75rem 0 0 .1rem;
   background: linear-gradient(var(--accent-raw), transparent);
