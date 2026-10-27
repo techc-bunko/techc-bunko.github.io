@@ -96,8 +96,10 @@
       var val = b.getAttribute('data-value');
       prefs[key] = key === 'size' ? Number(val) : val;
       savePrefs();
-      /* 縦横を変えると面の向きごと変わるので、読書位置を取り直す */
+      /* 縦横を変えると面の向きごと変わるので、読書位置を取り直す。
+         縦組みは文字の大きさや書体でも1ページの行数が変わるので組み直す */
       if (key === 'writing' && DATA) { negScroll = null; restoreScroll(false); }
+      else if ((key === 'size' || key === 'font') && DATA && prefs.writing === 'vertical') restoreScroll(false);
     });
     document.addEventListener('click', function () { openPanel(false); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') openPanel(false); });
@@ -206,7 +208,6 @@
 
     view.innerHTML =
       '<article class="chapter">' +
-        '<p class="tate-note wrap">縦組みで表示しています。本文は右から左へ進みます。続きは右にスワイプ（横スクロール）してお読みください。</p>' +
         '<div class="chapter__stage wrap">' +
           '<header class="chapter__head">' +
           '<div class="chapter__num">' + esc(c.num) + '</div>' +
@@ -215,6 +216,9 @@
           '</header>' +
           '<div class="chapter__body">' + c.html + '</div>' +
         '</div>' +
+        /* 縦組みのときだけ見える。ページ数とめくり方 */
+        '<div class="pager wrap"><span>右へスライド・左側をタップで次のページ</span>' +
+          '<span class="pager__num"></span></div>' +
         (last
           ? '<div class="fin wrap"><div class="fin__mark">了</div>' +
             '<p class="fin__note">最後までお読みいただき、ありがとうございました。</p>' +
@@ -267,9 +271,12 @@
     var saved = store.get(kScroll());
     if (prefs.writing === 'vertical' && el) {
       if (negScroll === null) detectScrollDir(el);
-      el.scrollLeft = saved === null ? vStart(el) : Number(saved);
-      if (!fresh) window.scrollTo(0, 0);
+      layoutPages();
+      /* 保存してある位置を、いちばん近いページの頭にそろえる */
+      goPage(saved === null || !pageW ? 0 : Math.round(Math.abs(Number(saved) - vStart(el)) / pageW), true);
+      window.scrollTo(0, 0);
     } else {
+      layoutPages();
       window.scrollTo(0, fresh ? Number(saved || 0) : window.scrollY);
     }
     updateProgress();
@@ -289,6 +296,7 @@
       var sl = el.scrollLeft;
       setProgress(negScroll ? -sl / max : (max - sl) / max);
       store.set(kScroll(), String(sl));
+      updatePager();
     } else {
       var h = document.documentElement.scrollHeight - window.innerHeight;
       setProgress(h > 0 ? window.scrollY / h : 1);
@@ -337,48 +345,166 @@
     tickTimer = setTimeout(function () { lastTick = Date.now(); updateProgress(); }, 80);
   }
   window.addEventListener('scroll', onScroll, { passive: true });
-  window.addEventListener('resize', onScroll, { passive: true });
+  window.addEventListener('resize', function () {
+    /* 画面の向きや大きさが変わったら、今のページを保ったままページを組み直す */
+    var el = bodyEl();
+    if (prefs.writing === 'vertical' && el && pageW) {
+      var p = curPage();
+      layoutPages();
+      goPage(p, true);
+    }
+    onScroll();
+  }, { passive: true });
 
-  /* ---------- 縦組みのとき、指の向きを自分で見る ---------- */
-  /* 縦組みの本文は横スクロールの器なので、指を縦に動かしても端末がその器に
-     動きを渡してしまい、ページが動かない。下の「次の話へ」「目次」まで
-     降りられなくなる。CSS の touch-action だけでは端末によって直らなかったので、
-     最初のひと動きで向きを決め、縦ならこちらでページを動かす。
-     横のときは何もしない（端末まかせ＝本文が進む）。 */
-  function bindVerticalPan(el) {
-    var sx = 0, sy = 0, sTop = 0, axis = '';
+  /* ---------- 縦組みはページめくり ---------- */
+  /* 縦組みの面は指でスクロールさせず、スライドかタップで1ページずつ送る。
+     横スクロールの器にすると、iPhone では本文の上で指を動かしても
+     端末が動きを先に取ってしまい、ページが動かなかったため。
+     1ページの幅は「行の幅のちょうど何列ぶん」にして、ページの境目で
+     行が半分に切れないようにする。 */
+  var pageW = 0;
 
-    el.addEventListener('touchstart', function (e) {
-      /* 二本指は拡大なので触らない */
-      axis = e.touches.length === 1 ? '' : 'skip';
-      if (axis === 'skip') return;
-      sx = e.touches[0].clientX;
-      sy = e.touches[0].clientY;
-      sTop = window.scrollY;
-    }, { passive: true });
+  /* 本文1行の幅（縦組みでは行が横に並ぶので、行の高さ＝列の幅） */
+  function linePitch(el) {
+    var b = el.querySelector('.chapter__body');
+    return b ? parseFloat(getComputedStyle(b).lineHeight) || 0 : 0;
+  }
 
-    el.addEventListener('touchmove', function (e) {
-      if (axis === 'skip' || prefs.writing !== 'vertical' || e.touches.length !== 1) return;
-      var dx = e.touches[0].clientX - sx;
-      var dy = e.touches[0].clientY - sy;
+  function layoutPages() {
+    var el = bodyEl();
+    pageW = 0;
+    if (!el) return;
+    var head = el.querySelector('.chapter__head');
+    if (prefs.writing !== 'vertical') {
+      /* 横組みに戻したときは、縦組み用に足した寸法を外す */
+      el.style.height = el.style.paddingLeft = el.style.paddingRight = el.style.clipPath = '';
+      if (head) head.style.marginLeft = '';
+      var f = el.querySelector('.page-fill');
+      if (f) f.remove();
+      return;
+    }
 
-      /* 8px 動くまでは向きを決めない。決めたらその指のあいだは変えない */
-      if (!axis) {
-        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-        axis = Math.abs(dy) > Math.abs(dx) ? 'y' : 'x';
+    /* 高さ：面の上端から、下のページ数と固定した操作列の手前まで */
+    var nav = view.querySelector('.chapter__nav');
+    var pager = view.querySelector('.pager');
+    var top = el.getBoundingClientRect().top + window.scrollY;
+    var below = (nav ? nav.offsetHeight : 0) + (pager ? pager.offsetHeight + 8 : 0) + 8;
+    /* 背の高い画面で一列が長くなりすぎないよう、42rem で止める */
+    var h = Math.min(window.innerHeight - top - below, 42 * 16);
+    el.style.height = Math.max(240, h) + 'px';
+
+    /* 幅：左右の余白を、表示する幅が行の幅の倍数になるよう決める */
+    var pitch = linePitch(el);
+    if (!pitch) return;
+    el.style.paddingLeft = el.style.paddingRight = '0px';
+    var w = el.clientWidth;
+    var inner = Math.max(pitch, Math.floor((w - 24) / pitch) * pitch);
+    var side = (w - inner) / 2 + 'px';
+    el.style.paddingLeft = side;
+    el.style.paddingRight = side;
+    /* overflow は余白の外側で切るので、そのままだと隣のページの行が
+       余白に半分のぞく。見える範囲を余白の内側で切る */
+    el.style.clipPath = 'inset(0 ' + side + ' 0 ' + side + ')';
+
+    /* 見出しの列も、本文の行の幅のちょうど倍数ぶんを使うようにする。
+       これがずれると、2ページ目から先で行が境目にまたがる */
+    if (head) {
+      head.style.marginLeft = '0px';
+      var hw = head.offsetWidth;
+      head.style.marginLeft = (Math.ceil(hw / pitch + 1) * pitch - hw) + 'px';
+    }
+
+    /* 最後のページが半端だと、端まで送ったときに前のページの行が重なって
+       見える。末尾に空きを足して、全体をページの幅のちょうど倍数にする */
+    var fill = el.querySelector('.page-fill');
+    if (!fill) { fill = document.createElement('div'); fill.className = 'page-fill'; el.appendChild(fill); }
+    fill.style.width = '0px';
+    var extent = el.scrollWidth - el.clientWidth;
+    var rest = Math.ceil(extent / inner - 0.01) * inner - extent;
+    fill.style.width = (rest > 1 ? rest : 0) + 'px';
+    pageW = inner;
+  }
+
+  function pageCount() {
+    var el = bodyEl();
+    if (!el || !pageW) return 1;
+    return Math.max(1, Math.ceil((el.scrollWidth - el.clientWidth - 1) / pageW) + 1);
+  }
+  function curPage() {
+    var el = bodyEl();
+    if (!el || !pageW) return 0;
+    return Math.round(Math.abs(el.scrollLeft - vStart(el)) / pageW);
+  }
+  /* n ページ目（0 から）を出す。vertical-rl では先へ進むほど左になる */
+  function goPage(n, instant) {
+    var el = bodyEl();
+    if (!el || !pageW) return;
+    n = Math.max(0, Math.min(pageCount() - 1, n));
+    goTarget = n; goTime = Date.now();
+    var left = vStart(el) - n * pageW;
+    if (instant) el.scrollLeft = left;
+    else el.scrollTo({ left: left, behavior: 'smooth' });
+    updatePager(n);
+  }
+  /* 1ページ送る。最後のページの先は次の話へ、最初のページの手前は前の話へ。
+     最終話の最後のページの先は、下の「了」へ */
+  var goTarget = 0, goTime = 0;
+  function flip(dir) {
+    /* めくっている途中（なめらかに動いている間）に続けて押されたら、
+       途中の位置ではなく、向かっているページから数える */
+    var p = Date.now() - goTime < 700 ? goTarget : curPage(), last = pageCount() - 1;
+    if (dir > 0 && p >= last) {
+      if (currentIndex + 1 < CH.length) location.hash = '#c' + (currentIndex + 2);
+      else window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+      return;
+    }
+    if (dir < 0 && p <= 0) {
+      if (currentIndex > 0) location.hash = '#c' + currentIndex;
+      return;
+    }
+    goPage(p + dir);
+  }
+
+  function updatePager(n) {
+    var num = view ? view.querySelector('.pager__num') : null;
+    if (!num || !pageW) return;
+    num.textContent = ((n === undefined ? curPage() : n) + 1) + ' / ' + pageCount();
+  }
+
+  /* スライドとタップを受け取る。
+     ・右へスライド／左の3分の1をタップ → 次のページ（本は左へ進むので）
+     ・左へスライド／右の3分の1をタップ → 前のページ
+     マウスでも同じように動くよう pointer イベントで受ける。 */
+  function bindPager(el) {
+    var sx = 0, sy = 0, st = 0, active = 0, cancel = false;
+
+    el.addEventListener('pointerdown', function (e) {
+      active++;
+      /* 二本指は拡大なので、めくらない */
+      cancel = active > 1;
+      sx = e.clientX; sy = e.clientY; st = Date.now();
+    });
+    var end = function (e) {
+      active = Math.max(0, active - 1);
+      if (cancel || prefs.writing !== 'vertical') return;
+      var dx = e.clientX - sx, dy = e.clientY - sy;
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+        flip(dx > 0 ? 1 : -1);
+      } else if (Math.abs(dx) < 10 && Math.abs(dy) < 10 && Date.now() - st < 400) {
+        var r = el.getBoundingClientRect(), x = (e.clientX - r.left) / r.width;
+        if (x < 1 / 3) flip(1);
+        else if (x > 2 / 3) flip(-1);
       }
-      if (axis !== 'y') return;
-
-      e.preventDefault();
-      window.scrollTo(0, sTop - dy);
-    }, { passive: false });
+    };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', function () { active = Math.max(0, active - 1); cancel = true; });
   }
 
   function bindProgress() {
     var el = bodyEl();
     if (!el) return;
     el.addEventListener('scroll', onScroll, { passive: true });
-    bindVerticalPan(el);
+    bindPager(el);
   }
 
   /* ---------- 目次シート ---------- */
@@ -402,6 +528,12 @@
     if (e.key === 'Escape') openSheet(false);
     if (e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
     if (currentIndex < 0) return;
+    /* 縦組みは矢印キーでページをめくる。本は左へ進むので ← が次 */
+    if (prefs.writing === 'vertical' && pageW) {
+      if (e.key === 'ArrowLeft') flip(1);
+      if (e.key === 'ArrowRight') flip(-1);
+      return;
+    }
     if (e.key === 'ArrowRight' && currentIndex + 1 < CH.length) location.hash = '#c' + (currentIndex + 2);
     if (e.key === 'ArrowLeft' && currentIndex > 0) location.hash = '#c' + currentIndex;
   });

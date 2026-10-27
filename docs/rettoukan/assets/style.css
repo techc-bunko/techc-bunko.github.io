@@ -284,39 +284,36 @@ button { font: inherit; color: inherit; }
   text-orientation: upright;
   text-combine-upright: none;
 
-  /* 版面の高さ。svh を使うのは、vh だとアドレスバーが出ている間に
-     下端がバーの裏へ入り、列の下が見切れるため。 */
-  height: 72svh;
-  min-height: 18rem;
-  max-height: 42rem;
+  /* 版面の高さ。実際の高さは reader.js の layoutPages が画面に合わせて
+     決める（上の帯から下の操作列までいっぱい）。これは JS が動く前の仮の値。
+     svh を使うのは、vh だとアドレスバーの裏に下端が入るため。 */
+  height: 64svh;
+  min-height: 15rem;
 
   /* .wrap の効き（width と margin-inline）を物理プロパティで打ち消す */
   width: 100%;
   max-width: none;
-  margin: 2.25rem 0 0;
+  margin: .75rem 0 0;
 
-  /* 上下は版面の余白、左右は最初と最後の列が端に貼りつかないための余白 */
-  padding: 1.5rem 1.25rem;
+  /* 左右の余白は layoutPages が「行の幅のちょうど何列ぶん」になるよう決め直す */
+  padding: 1rem 1.25rem;
   box-sizing: border-box;
 
-  overflow-x: auto;
-  overflow-y: hidden;
-  overscroll-behavior-x: contain;
-  scrollbar-width: thin;
-  /* 横向きの指の動きはこの中の横スクロールに回す。
-     縦向きの動きは reader.js の bindVerticalPan が受け取ってページを動かす。
-     pan-x pan-y にすると端末が先に動きを掴んでしまい、JS から止められない。
-     ここを外すと横の動きがページ側に取られて本文が進まなくなる。 */
-  touch-action: pan-x;
-  -webkit-overflow-scrolling: touch;
+  /* 縦組みはページめくり。指でのスクロールはさせず、reader.js が
+     スライドとタップを受け取って1ページずつ送る。
+     横スクロールの器にすると、iPhone では指の動きを端末が先に取ってしまい、
+     本文の上でページが動かなかった。拡大（二本指）だけは端末に任せる。 */
+  overflow: hidden;
+  touch-action: pinch-zoom;
+  -webkit-user-select: none;
+  user-select: none;
 
   border-top: 1px solid var(--line-soft);
   border-bottom: 1px solid var(--line-soft);
 }
 
 /* 縦組みでは操作列を画面の下に貼り付ける。
-   本文の面が横スクロールの器なので、指の動きがそこに吸われてページを
-   下まで降ろせない端末がある。降ろせなくても押せるようにしておく。 */
+   面は画面いっぱいの高さなので、操作列はその下に常に見えている */
 [data-writing="vertical"] .chapter__nav {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 55;
   margin: 0;
@@ -326,12 +323,12 @@ button { font: inherit; color: inherit; }
   background: var(--bg);
   border-top: 1px solid var(--line);
 }
-/* 固定した操作列のぶん、面を詰めて重ならないようにする */
-[data-writing="vertical"] .chapter__stage { height: 64svh; }
-/* 先頭へ戻るボタンは操作列の上に逃がす */
-[data-writing="vertical"] .to-top { bottom: calc(5.25rem + env(safe-area-inset-bottom)); }
+/* ページめくりなので「先頭へ戻る」は使わない */
+[data-writing="vertical"] .to-top { display: none; }
 
-/* 見出しは面のいちばん右の列になる。本文との間に一列ぶんの間を空ける */
+/* 見出しは面のいちばん右の列になる。本文との間の空きは、行の幅の
+   ちょうど何列ぶんかになるよう layoutPages が決める（ページの境目で
+   行が切れないようにするため） */
 [data-writing="vertical"] .chapter__head {
   margin: 0 0 0 2.25rem;
   padding: 0;
@@ -359,29 +356,29 @@ button { font: inherit; color: inherit; }
   padding: 0;
   width: auto;
   max-width: none;
+  /* 1ページに多めに入るよう、横組みより行の間を詰める */
+  line-height: calc(var(--read-leading) - .35);
 }
-/* 段落の間。縦組みでは左向きに空く */
-[data-writing="vertical"] .chapter__body p { margin: 0 0 1.5em; }
-[data-writing="vertical"] .chapter__body .break { height: auto; width: 2.4em; }
+/* 段落の間は空けない（縦組みの本と同じく字下げだけで区切る）。
+   空けると行の幅の倍数からずれて、ページの境目で行が切れる */
+[data-writing="vertical"] .chapter__body p { margin: 0; }
+/* 場面転換の「＊＊＊」は、ちょうど一行ぶんの幅にする */
+[data-writing="vertical"] .chapter__body .break {
+  height: auto;
+  width: calc(var(--read-size) * (var(--read-leading) - .35));
+}
 
-/* 縦組みのときだけ出す案内 */
-[data-writing="vertical"] .tate-note { display: block; }
-.tate-note {
-  display: none;
-  /* margin のショートハンドを使うと .wrap の margin-inline:auto を消して
-     左端に貼りついてしまうので、上だけを指定する */
-  margin-top: 1.75rem;
+/* 縦組みのときだけ出す、ページ数とめくり方の案内 */
+.pager { display: none; }
+[data-writing="vertical"] .pager {
+  display: flex; justify-content: space-between; align-items: center; gap: .75rem;
+  margin-top: .4rem;
   font-size: .75rem;
-  line-height: 1.9;
+  line-height: 1.6;
   color: var(--ink-3);
-  letter-spacing: .06em;
+  letter-spacing: .04em;
 }
-
-/* 画面が低いときは版面も低くする（横向きのスマホなど）。
-   下に固定した操作列と重ならない高さにする */
-@media (max-height: 34rem) {
-  [data-writing="vertical"] .chapter__stage { height: 62svh; padding: 1rem; }
-}
+.pager__num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* ---------- 設定パネル ---------- */
 .panel {
