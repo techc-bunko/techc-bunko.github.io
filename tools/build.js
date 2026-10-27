@@ -34,6 +34,16 @@ const ROOT = path.join(__dirname, '..');
 const SRC = path.join(ROOT, 'src');
 const DOCS = path.join(ROOT, 'docs');
 
+/* 素材（CSS/JS）の URL に付ける版の印。中身が変わると印も変わる。
+   Service Worker は素材をキャッシュ優先で返すので、URL が同じままだと
+   更新後に最初に開いたときだけ古い素材が出る（新しいページに古い見た目）。
+   URL を変えれば古いキャッシュに当たらず、最初から新しい素材を取りに行く。 */
+const ASSET_VER = createHash('sha1')
+  .update(fs.readFileSync(path.join(SRC, 'assets', 'style.css')))
+  .update(fs.readFileSync(path.join(SRC, 'assets', 'reader.js')))
+  .digest('hex')
+  .slice(0, 8);
+
 /* 確認用に施錠を外して組むフラグ。本番ビルドでは絶対に付けない */
 const UNLOCKED = process.argv.includes('--unlocked');
 
@@ -378,7 +388,7 @@ function buildIndex(cfg, all, opt = {}) {
 ${ICON_LINK}${appleIcon}
 ${ogpTags(cfg, { path: opt.path || '' }, { title: siteName, desc, image: ogImage })}
 ${FONTS}
-<link rel="stylesheet" href="./assets/style.css">
+<link rel="stylesheet" href="./assets/style.css?v=${ASSET_VER}">
 <style>
 ${accents}
 </style>
@@ -412,7 +422,7 @@ ${cards}
   </div>
 </footer>
 ${settingsPanel()}
-<script src="./assets/reader.js" defer></script>
+<script src="./assets/reader.js?v=${ASSET_VER}" defer></script>
 ${SW_REGISTER}
 </body>
 </html>
@@ -439,7 +449,7 @@ function build404(cfg) {
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 ${FONTS}
-<link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="/assets/style.css?v=${ASSET_VER}">
 ${THEME_BOOT}
 </head>
 <body class="top-page">
@@ -569,7 +579,7 @@ function buildPage(work, meta, cfg, outDir, others) {
 ${ICON_LINK}${appleIcon}
 ${ogpTags(cfg, meta, { title, desc, image: ogImage })}
 ${FONTS}
-<link rel="stylesheet" href="./assets/style.css">
+<link rel="stylesheet" href="./assets/style.css?v=${ASSET_VER}">
 <style>
 ${accentBlock(meta.accent)}
 </style>
@@ -586,7 +596,7 @@ ${settingsPanel()}
 ${tocSheet()}
 ${toTopBtn()}
 <script type="application/json" id="yomi-data">${jsonForScript(data)}</script>
-<script src="./assets/reader.js" defer></script>
+<script src="./assets/reader.js?v=${ASSET_VER}" defer></script>
 ${SW_REGISTER}
 </body>
 </html>
@@ -600,7 +610,7 @@ ${SW_REGISTER}
    オフライン（Service Worker / manifest）
    ============================================================ */
 function buildOffline(meta, title, version, outDir) {
-  const precache = ['./', './index.html', './assets/style.css', './assets/reader.js'];
+  const precache = ['./', './index.html', './assets/style.css?v=' + ASSET_VER, './assets/reader.js?v=' + ASSET_VER];
 
   /* キャッシュ名は作品ごとに分ける。Cache Storage はオリジン単位で共有される
      ため、同じオリジンに作品を並べたとき、接頭辞を分けずに
