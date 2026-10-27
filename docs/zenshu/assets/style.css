@@ -303,16 +303,33 @@ button { font: inherit; color: inherit; }
   overflow-y: hidden;
   overscroll-behavior-x: contain;
   scrollbar-width: thin;
-  /* 横向きの指の動きはこの中の横スクロールに、縦向きの動きはページに回す。
-     pan-x だけにすると、本文の上では縦に動かしてもページが動かず、
-     下の「次の話へ」や「目次」まで降りられなくなる。
-     逆に指定を外すと、横の動きがページ側に取られて本文が進まないことがある。 */
-  touch-action: pan-x pan-y;
+  /* 横向きの指の動きはこの中の横スクロールに回す。
+     縦向きの動きは reader.js の bindVerticalPan が受け取ってページを動かす。
+     pan-x pan-y にすると端末が先に動きを掴んでしまい、JS から止められない。
+     ここを外すと横の動きがページ側に取られて本文が進まなくなる。 */
+  touch-action: pan-x;
   -webkit-overflow-scrolling: touch;
 
   border-top: 1px solid var(--line-soft);
   border-bottom: 1px solid var(--line-soft);
 }
+
+/* 縦組みでは操作列を画面の下に貼り付ける。
+   本文の面が横スクロールの器なので、指の動きがそこに吸われてページを
+   下まで降ろせない端末がある。降ろせなくても押せるようにしておく。 */
+[data-writing="vertical"] .chapter__nav {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 55;
+  margin: 0;
+  padding: .6rem max(1.25rem, env(safe-area-inset-left))
+           calc(.6rem + env(safe-area-inset-bottom))
+           max(1.25rem, env(safe-area-inset-right));
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+}
+/* 固定した操作列のぶん、面を詰めて重ならないようにする */
+[data-writing="vertical"] .chapter__stage { height: 64svh; }
+/* 先頭へ戻るボタンは操作列の上に逃がす */
+[data-writing="vertical"] .to-top { bottom: calc(5.25rem + env(safe-area-inset-bottom)); }
 
 /* 見出しは面のいちばん右の列になる。本文との間に一列ぶんの間を空ける */
 [data-writing="vertical"] .chapter__head {
@@ -360,9 +377,10 @@ button { font: inherit; color: inherit; }
   letter-spacing: .06em;
 }
 
-/* 画面が低いときは版面も低くする（横向きのスマホなど） */
+/* 画面が低いときは版面も低くする（横向きのスマホなど）。
+   下に固定した操作列と重ならない高さにする */
 @media (max-height: 34rem) {
-  [data-writing="vertical"] .chapter__stage { height: 78svh; padding: 1rem; }
+  [data-writing="vertical"] .chapter__stage { height: 62svh; padding: 1rem; }
 }
 
 /* ---------- 設定パネル ---------- */

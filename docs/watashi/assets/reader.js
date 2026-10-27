@@ -339,9 +339,46 @@
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('resize', onScroll, { passive: true });
 
+  /* ---------- 縦組みのとき、指の向きを自分で見る ---------- */
+  /* 縦組みの本文は横スクロールの器なので、指を縦に動かしても端末がその器に
+     動きを渡してしまい、ページが動かない。下の「次の話へ」「目次」まで
+     降りられなくなる。CSS の touch-action だけでは端末によって直らなかったので、
+     最初のひと動きで向きを決め、縦ならこちらでページを動かす。
+     横のときは何もしない（端末まかせ＝本文が進む）。 */
+  function bindVerticalPan(el) {
+    var sx = 0, sy = 0, sTop = 0, axis = '';
+
+    el.addEventListener('touchstart', function (e) {
+      /* 二本指は拡大なので触らない */
+      axis = e.touches.length === 1 ? '' : 'skip';
+      if (axis === 'skip') return;
+      sx = e.touches[0].clientX;
+      sy = e.touches[0].clientY;
+      sTop = window.scrollY;
+    }, { passive: true });
+
+    el.addEventListener('touchmove', function (e) {
+      if (axis === 'skip' || prefs.writing !== 'vertical' || e.touches.length !== 1) return;
+      var dx = e.touches[0].clientX - sx;
+      var dy = e.touches[0].clientY - sy;
+
+      /* 8px 動くまでは向きを決めない。決めたらその指のあいだは変えない */
+      if (!axis) {
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+        axis = Math.abs(dy) > Math.abs(dx) ? 'y' : 'x';
+      }
+      if (axis !== 'y') return;
+
+      e.preventDefault();
+      window.scrollTo(0, sTop - dy);
+    }, { passive: false });
+  }
+
   function bindProgress() {
     var el = bodyEl();
-    if (el) el.addEventListener('scroll', onScroll, { passive: true });
+    if (!el) return;
+    el.addEventListener('scroll', onScroll, { passive: true });
+    bindVerticalPan(el);
   }
 
   /* ---------- 目次シート ---------- */
