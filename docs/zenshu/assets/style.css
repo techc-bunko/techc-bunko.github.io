@@ -271,6 +271,24 @@ button { font: inherit; color: inherit; }
 .fin__note { margin: 1rem 0 0; font-size: .8125rem; line-height: 2; color: var(--ink-3); }
 .fin__act { margin: 1.6rem 0 0; }
 
+/* 最終話の感想。各話の一行とちがい、枠で囲んではっきり見せる */
+.fin__ask {
+  margin: 2rem auto 0; max-width: 26rem;
+  padding: 1.4rem 1.25rem 1.25rem;
+  border: 2px solid var(--accent); border-radius: 14px;
+  background: var(--bg-soft);
+}
+.fin__ask-lead { margin: 0; font-family: var(--font-mincho); font-size: 1.0625rem; font-weight: 600; letter-spacing: .06em; color: var(--ink); }
+.fin__ask-sub { margin: .45rem 0 1rem; font-size: .8125rem; color: var(--ink-3); line-height: 1.8; }
+
+/* 最終話の下の「ほかの作品」。題名とジャンルだけ（リンクは付けない） */
+.others { margin: 2.5rem auto 0; max-width: 26rem; text-align: left; }
+.others__label { margin: 0 0 .6rem; font-size: .75rem; letter-spacing: .14em; color: var(--ink-3); text-align: center; }
+.others__list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line-soft); }
+.others__list li { display: flex; justify-content: space-between; align-items: baseline; gap: .75rem; padding: .8rem .25rem; border-bottom: 1px solid var(--line-soft); }
+.others__title { font-family: var(--font-mincho); font-size: 1rem; letter-spacing: .06em; color: var(--ink); }
+.others__genre { font-size: .75rem; color: var(--ink-3); white-space: nowrap; }
+
 /* ---------- 縦組み ----------
    見出しから本文までを一枚の面（.chapter__stage）にまとめ、その面ごと
    vertical-rl にして横スクロールさせる。見出しだけ横組みのまま残すと
@@ -379,6 +397,43 @@ button { font: inherit; color: inherit; }
   letter-spacing: .04em;
 }
 .pager__num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pager__hint a { color: var(--ink-3); text-decoration: underline; text-underline-offset: .2em; }
+
+/* 縦組みで最終話の「了」まで送ったとき、固定した操作列の裏に隠れないように。
+   上で止めるときも、上の帯の裏に「了」が入らないよう少し下げる */
+[data-writing="vertical"] .chapter { padding-bottom: 6rem; }
+.fin { scroll-margin-top: 4.5rem; }
+
+/* ---------- めくるときの紙の影 ---------- */
+.chapter { position: relative; overflow-x: hidden; overflow-x: clip; }
+.turn-shade {
+  position: absolute; left: 0; right: 0; z-index: 5;
+  pointer-events: none;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(0, 0, 0, .04) 30%,
+    rgba(0, 0, 0, .14) 46%,
+    rgba(255, 255, 255, .35) 52%,
+    rgba(0, 0, 0, .05) 62%,
+    transparent 100%);
+}
+[data-theme="dark"] .turn-shade {
+  background: linear-gradient(90deg,
+    transparent 0%, rgba(0, 0, 0, .2) 40%, rgba(255, 255, 255, .08) 52%, rgba(0, 0, 0, .15) 62%, transparent 100%);
+}
+
+/* ---------- 全画面で読む ---------- */
+/* 上の帯と、縦組みの下に固定した操作列を隠して文字だけにする */
+[data-immersive="1"] .topbar { display: none; }
+[data-immersive="1"][data-writing="vertical"] .chapter__nav { display: none; }
+[data-immersive="1"][data-writing="vertical"] .chapter { padding-top: .5rem; padding-bottom: 1rem; }
+
+/* ---------- 各話の終わりの感想（控えめ） ---------- */
+/* しつこくならないよう、灰色の小さな一行だけ。縦組みではページ数の横に出す */
+.ch-feedback { margin-top: 2.25rem; text-align: right; font-size: .8125rem; }
+.ch-feedback a { color: var(--ink-3); text-decoration: none; letter-spacing: .04em; }
+.ch-feedback a:hover { color: var(--accent); text-decoration: underline; }
+[data-writing="vertical"] .ch-feedback { display: none; }
 
 /* ---------- 設定パネル ---------- */
 .panel {

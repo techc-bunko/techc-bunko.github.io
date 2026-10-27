@@ -115,6 +115,7 @@
   var CH = DATA.chapters || DATA.toc || [];
   var LOCKED = !!DATA.locked;
   var FEEDBACK = DATA.feedbackUrl || '';
+  var OTHERS = DATA.others || [];
   var view = document.getElementById('view');
   var tocEl = document.getElementById('toc');
   var coverEl = document.getElementById('cover');
@@ -174,6 +175,8 @@
   }
 
   function showCover() {
+    /* 全画面のまま扉に戻ると上の帯が無くて迷うので、戻しておく */
+    root.removeAttribute('data-immersive');
     if (coverEl) coverEl.hidden = false;
     if (view) { view.hidden = true; view.innerHTML = ''; }
     if (topTitle) topTitle.textContent = '';
@@ -216,16 +219,32 @@
           '</header>' +
           '<div class="chapter__body">' + c.html + '</div>' +
         '</div>' +
-        /* 縦組みのときだけ見える。ページ数とめくり方 */
-        '<div class="pager wrap"><span>右へスライド・左側をタップで次のページ</span>' +
+        /* 縦組みのときだけ見える。ページ数とめくり方（最後のページでは感想の一行に変わる） */
+        '<div class="pager wrap"><span class="pager__hint"></span>' +
           '<span class="pager__num"></span></div>' +
+        /* 各話の終わりの感想は、しつこくならないよう灰色の小さな一行だけ。
+           最終話は下の「了」の枠で大きく出すので、ここには出さない。
+           感想フォームは config.json に feedbackUrl を書いたときだけ出る */
+        (!last && FEEDBACK
+          ? '<p class="ch-feedback wrap"><a href="' + esc(FEEDBACK) +
+            '" target="_blank" rel="noopener">この' + DATA.unit + 'の感想をひとこと ›</a></p>'
+          : '') +
         (last
           ? '<div class="fin wrap"><div class="fin__mark">了</div>' +
             '<p class="fin__note">最後までお読みいただき、ありがとうございました。</p>' +
-            /* 感想フォームは config.json に feedbackUrl を書いたときだけ出る */
             (FEEDBACK
-              ? '<p class="fin__act"><a class="btn btn--primary" href="' + esc(FEEDBACK) +
-                '" target="_blank" rel="noopener">感想を送る</a></p>'
+              ? '<div class="fin__ask"><p class="fin__ask-lead">感想をお聞かせください</p>' +
+                '<p class="fin__ask-sub">ひとことでも大歓迎です。作者に届きます。</p>' +
+                '<a class="btn btn--primary btn--block" href="' + esc(FEEDBACK) +
+                '" target="_blank" rel="noopener">感想を送る</a></div>'
+              : '') +
+            /* ほかの作品は題名とジャンルだけ。リンクは付けない（買っていない作品が読めてしまうため） */
+            (OTHERS.length
+              ? '<div class="others"><p class="others__label">ところてん文庫のほかの作品</p><ul class="others__list">' +
+                OTHERS.map(function (o) {
+                  return '<li><span class="others__title">' + esc(o.title) + '</span>' +
+                    (o.genre ? '<span class="others__genre">' + esc(o.genre) + '</span>' : '') + '</li>';
+                }).join('') + '</ul></div>'
               : '') +
             '</div>'
           : '') +
@@ -389,8 +408,10 @@
     var pager = view.querySelector('.pager');
     var top = el.getBoundingClientRect().top + window.scrollY;
     var below = (nav ? nav.offsetHeight : 0) + (pager ? pager.offsetHeight + 8 : 0) + 8;
-    /* 背の高い画面で一列が長くなりすぎないよう、42rem で止める */
-    var h = Math.min(window.innerHeight - top - below, 42 * 16);
+    /* パソコンの背の高い画面で一列が長くなりすぎないよう、42rem で止める。
+       スマホ（幅の狭い画面）は上限なしで、画面いっぱいまで使う */
+    var cap = window.innerWidth > 640 ? 42 * 16 : Infinity;
+    var h = Math.min(window.innerHeight - top - below, cap);
     el.style.height = Math.max(240, h) + 'px';
 
     /* 幅：左右の余白を、表示する幅が行の幅の倍数になるよう決める */
@@ -440,11 +461,39 @@
     var el = bodyEl();
     if (!el || !pageW) return;
     n = Math.max(0, Math.min(pageCount() - 1, n));
+    var from = goTime && Date.now() - goTime < 700 ? goTarget : curPage();
     goTarget = n; goTime = Date.now();
-    var left = vStart(el) - n * pageW;
-    if (instant) el.scrollLeft = left;
-    else el.scrollTo({ left: left, behavior: 'smooth' });
+    el.scrollLeft = vStart(el) - n * pageW;
+    if (!instant && n !== from) turnEffect(el, n > from ? 1 : -1);
     updatePager(n);
+  }
+
+  /* 紙をめくるような動き。ページはすぐ入れ替え、その上を紙の影がさっと横切り、
+     新しいページがめくった向きから少しずれて落ち着く。
+     縦組みの本は左のページを右へめくるので、次へ進むときは影が左から右へ流れる。
+     「視差効果を減らす」を選んでいる端末では動かさない。 */
+  var reduceMotion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+  function turnEffect(el, dir) {
+    if ((reduceMotion && reduceMotion.matches) || !el.animate) return;
+    var host = el.parentNode;
+    var shade = document.createElement('div');
+    shade.className = 'turn-shade';
+    shade.style.top = el.offsetTop + 'px';
+    shade.style.height = el.offsetHeight + 'px';
+    host.appendChild(shade);
+    var a = shade.animate(
+      [{ transform: 'translateX(' + (dir > 0 ? '-100%' : '100%') + ')', opacity: 1 },
+       { transform: 'translateX(' + (dir > 0 ? '100%' : '-100%') + ')', opacity: .6 }],
+      { duration: 380, easing: 'cubic-bezier(.3,.6,.4,1)' });
+    a.onfinish = a.oncancel = function () { shade.remove(); };
+    var body = el.querySelector('.chapter__body'), head = el.querySelector('.chapter__head');
+    [body, head].forEach(function (t) {
+      if (!t) return;
+      t.animate(
+        [{ transform: 'translateX(' + (dir > 0 ? -18 : 18) + 'px)', opacity: .25 },
+         { transform: 'none', opacity: 1 }],
+        { duration: 320, easing: 'cubic-bezier(.2,.7,.3,1)' });
+    });
   }
   /* 1ページ送る。最後のページの先は次の話へ、最初のページの手前は前の話へ。
      最終話の最後のページの先は、下の「了」へ */
@@ -455,7 +504,11 @@
     var p = Date.now() - goTime < 700 ? goTarget : curPage(), last = pageCount() - 1;
     if (dir > 0 && p >= last) {
       if (currentIndex + 1 < CH.length) location.hash = '#c' + (currentIndex + 2);
-      else window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+      else {
+        /* 「了」が画面の上に来るところまで下げる（いちばん下まで行くと「了」が見えない） */
+        var fin = view.querySelector('.fin');
+        if (fin) fin.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
       return;
     }
     if (dir < 0 && p <= 0) {
@@ -467,9 +520,33 @@
 
   function updatePager(n) {
     var num = view ? view.querySelector('.pager__num') : null;
+    var hint = view ? view.querySelector('.pager__hint') : null;
     if (!num || !pageW) return;
-    num.textContent = ((n === undefined ? curPage() : n) + 1) + ' / ' + pageCount();
+    var p = n === undefined ? curPage() : n, total = pageCount();
+    num.textContent = (p + 1) + ' / ' + total;
+    if (!hint) return;
+    var atEnd = p >= total - 1, isLast = currentIndex === CH.length - 1;
+    /* 最後のページだけ案内を変える。各話の感想はここに小さく一行だけ */
+    var html = '右へスライドで次へ・まん中で全画面';
+    if (atEnd && isLast) html = '左側をタップで「了」へ';
+    else if (atEnd && FEEDBACK) html = '<a href="' + esc(FEEDBACK) + '" target="_blank" rel="noopener">この' + DATA.unit + 'の感想をひとこと ›</a>';
+    if (hint.getAttribute('data-html') !== html) { hint.innerHTML = html; hint.setAttribute('data-html', html); }
   }
+
+  /* ---------- 全画面で読む ---------- */
+  /* 本文のまん中（横組みは本文のどこか）をタップすると、上の帯と下の操作列を
+     隠して文字だけにする。もう一度タップで戻す。話を離れたら戻す */
+  function setImmersive(on) {
+    if (on) root.setAttribute('data-immersive', '1');
+    else root.removeAttribute('data-immersive');
+    var el = bodyEl();
+    if (prefs.writing === 'vertical' && el && pageW) {
+      var p = goTime && Date.now() - goTime < 700 ? goTarget : curPage();
+      layoutPages();
+      goPage(p, true);
+    }
+  }
+  function toggleImmersive() { setImmersive(!root.hasAttribute('data-immersive')); }
 
   /* スライドとタップを受け取る。
      ・右へスライド／左の3分の1をタップ → 次のページ（本は左へ進むので）
@@ -494,6 +571,7 @@
         var r = el.getBoundingClientRect(), x = (e.clientX - r.left) / r.width;
         if (x < 1 / 3) flip(1);
         else if (x > 2 / 3) flip(-1);
+        else toggleImmersive();
       }
     };
     el.addEventListener('pointerup', end);
@@ -505,6 +583,13 @@
     if (!el) return;
     el.addEventListener('scroll', onScroll, { passive: true });
     bindPager(el);
+    /* 横組みは本文をタップして全画面に。文字を選んでいるときやリンクは除く */
+    el.addEventListener('click', function (e) {
+      if (prefs.writing === 'vertical' || e.target.closest('a')) return;
+      var sel = window.getSelection && window.getSelection();
+      if (sel && String(sel).length) return;
+      toggleImmersive();
+    });
   }
 
   /* ---------- 目次シート ---------- */

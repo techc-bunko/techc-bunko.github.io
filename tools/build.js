@@ -487,9 +487,12 @@ function lockPayload(ck, payload) {
 /* ============================================================
    ページを組む
    ============================================================ */
-function buildPage(work, meta, cfg, outDir) {
+function buildPage(work, meta, cfg, outDir, others) {
   const chapters = work.chapters;
   const unit = meta.unit || '章';
+  /* 最終話の下に出す「ほかの作品」。題名とジャンルだけで、リンクは付けない
+     （鍵が無いので、リンクを置くと買っていない作品まで読めてしまう） */
+  others = (others || []).map((o) => ({ title: o.title, genre: o.genre || '' }));
 
   const keyFile = path.join(SRC, 'keys', meta.slug + '.key');
   const wrapFile = path.join(SRC, 'keys', meta.slug + '.json');
@@ -515,9 +518,10 @@ function buildPage(work, meta, cfg, outDir) {
       /* 目次だけは伏せない。何章あるか見えたほうが買う判断がしやすい */
       toc: chapters.map((c) => ({ id: c.id, num: c.num, title: c.title || '' })),
       feedbackUrl: cfg.feedbackUrl || '',
+      others,
     };
   } else {
-    data = { slug: meta.slug, title: work.title, unit, chapters: full, feedbackUrl: cfg.feedbackUrl || '' };
+    data = { slug: meta.slug, title: work.title, unit, chapters: full, feedbackUrl: cfg.feedbackUrl || '', others };
   }
 
   const cover = `<div id="cover">
@@ -724,11 +728,20 @@ self.addEventListener('fetch', function (e) {
   const built = [];
 
   for (const meta of works) {
-    const file = path.join(SRC, 'raw', meta.slug + '.txt');
-    if (!fs.existsSync(file)) {
+    if (!fs.existsSync(path.join(SRC, 'raw', meta.slug + '.txt'))) {
       console.error(`原稿が見つからない: src/raw/${meta.slug}.txt`);
       process.exit(1);
     }
+  }
+  /* 「ほかの作品」の案内に使うので、先に全作品の題名を読んでおく */
+  const allTitles = works.map((m) => ({
+    slug: m.slug,
+    genre: m.genre,
+    title: parseRaw(fs.readFileSync(path.join(SRC, 'raw', m.slug + '.txt'), 'utf8')).title,
+  }));
+
+  for (const meta of works) {
+    const file = path.join(SRC, 'raw', meta.slug + '.txt');
     const work = parseRaw(fs.readFileSync(file, 'utf8'));
     if (!work.chapters.length) {
       console.error(`${meta.slug}: 章（## で始まる行）が1つも無い。原稿の書式を確認すること。`);
@@ -743,7 +756,7 @@ self.addEventListener('fetch', function (e) {
       fs.copyFileSync(path.join(SRC, 'assets', f), path.join(outDir, 'assets', f));
     }
 
-    const s = buildPage(work, meta, cfg, outDir);
+    const s = buildPage(work, meta, cfg, outDir, allTitles.filter((t) => t.slug !== meta.slug));
     const where = 'docs/' + (meta.path ? meta.path + '/' : '') + 'index.html';
     console.log(`  ${work.title}  全${s.chapters}${meta.unit || '章'} → ${where} (${(s.bytes / 1024).toFixed(0)} KB)`);
 
