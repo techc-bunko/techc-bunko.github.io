@@ -526,12 +526,14 @@ function buildPage(work, meta, cfg, outDir, others) {
 
   const cover = `<div id="cover">
   <section class="cover wrap">
+    <div class="cover__dust" aria-hidden="true"></div>
     <div class="cover__meta"><span>${esc(meta.colorName)}</span>・<span>${esc(meta.genre)}</span></div>
     <h1 class="cover__title">${esc(work.title)}</h1>
     <div class="cover__rule"></div>
     ${meta.tagline ? `<p class="cover__tagline">${esc(meta.tagline)}</p>` : ''}
     <p class="cover__stat">全 ${chapters.length} ${unit}</p>
     ${meta.notice ? `<p class="cover__notice">${esc(meta.notice)}</p>` : ''}
+    <div class="cover__vline" aria-hidden="true"></div>
   </section>
   ${locked ? gateBlock(cfg) : ''}
   <div class="wrap" id="continue" hidden></div>

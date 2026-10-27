@@ -201,6 +201,50 @@ button { font: inherit; color: inherit; }
 }
 .cover__tagline + .cover__stat { margin-top: 1.4rem; }
 
+/* ---------- 扉の動き（桜色メイドを参考に） ----------
+   開いたとき、題名がふわっと出て、罫と縦の線がすっと伸びる。一度だけ動いて止まる。
+   扉は本文から戻るたびに hidden が外れるので、そのたびに最初から動く。
+   後ろでは作品の色の小さな粒がゆっくり舞う（扉だけ。本文では舞わない）。 */
+.cover { position: relative; isolation: isolate; }
+.cover__vline {
+  width: 1.5px; height: 3.25rem; margin: 1.75rem 0 0 .1rem;
+  background: linear-gradient(var(--accent-raw), transparent);
+  transform-origin: top;
+}
+.cover__meta    { animation: cover-in .7s ease-out both; }
+.cover__title   { animation: cover-in .9s .15s ease-out both; }
+.cover__rule    { animation: cover-grow-x .7s .55s ease-out both; transform-origin: left; }
+.cover__tagline,
+.cover__stat    { animation: cover-in .8s .75s ease-out both; }
+.cover__vline   { animation: cover-grow-y 1s .95s ease-out both; }
+@keyframes cover-in     { from { opacity: 0; transform: translateY(.6rem); filter: blur(3px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes cover-grow-x { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes cover-grow-y { from { transform: scaleY(0); opacity: 0; } to { transform: scaleY(1); opacity: 1; } }
+
+/* 舞う粒。reader.js が粒を入れる。扉の上のほうだけ、文字の後ろで舞う */
+.cover__dust {
+  position: absolute; z-index: -1; pointer-events: none; overflow: hidden;
+  left: calc(50% - 50vw); right: calc(50% - 50vw); top: 0; height: 100%;
+}
+.cover__dust i {
+  position: absolute; top: -12px; display: block; border-radius: 50%;
+  background: var(--accent-raw);
+  animation: dust-fall var(--d, 14s) linear var(--delay, 0s) infinite;
+}
+@keyframes dust-fall {
+  0%   { transform: translate(0, 0); opacity: 0; }
+  10%  { opacity: var(--o, .35); }
+  50%  { transform: translate(var(--sx, 18px), calc(var(--fall, 400px) * .5)); }
+  90%  { opacity: var(--o, .35); }
+  100% { transform: translate(0, var(--fall, 400px)); opacity: 0; }
+}
+
+/* 「視差効果を減らす」の端末では動かさない（粒も出さない） */
+@media (prefers-reduced-motion: reduce) {
+  .cover__meta, .cover__title, .cover__rule, .cover__tagline, .cover__stat, .cover__vline { animation: none; }
+  .cover__dust { display: none; }
+}
+
 /* 目次 */
 .toc { margin-top: 1rem; }
 .toc__head {

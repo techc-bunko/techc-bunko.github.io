@@ -174,10 +174,32 @@
     showChapter(i);
   }
 
+  /* 扉の後ろで舞う粒（作品の色の小さな丸）。桜色メイドの花びらの代わり。
+     数・大きさ・速さは少しずつばらつかせる。一度入れたら入れ直さない */
+  function sowDust() {
+    var box = coverEl ? coverEl.querySelector('.cover__dust') : null;
+    if (!box) return;
+    box.style.setProperty('--fall', (box.offsetHeight + 24) + 'px');
+    if (box.firstChild) return;
+    for (var k = 0; k < 14; k++) {
+      var d = document.createElement('i');
+      var size = 3 + Math.random() * 6;
+      d.style.cssText =
+        'left:' + (Math.random() * 100).toFixed(1) + '%;' +
+        'width:' + size.toFixed(1) + 'px;height:' + size.toFixed(1) + 'px;' +
+        '--d:' + (11 + Math.random() * 9).toFixed(1) + 's;' +
+        '--delay:' + (-Math.random() * 16).toFixed(1) + 's;' +
+        '--sx:' + (Math.random() * 50 - 25).toFixed(0) + 'px;' +
+        '--o:' + (.18 + Math.random() * .3).toFixed(2);
+      box.appendChild(d);
+    }
+  }
+
   function showCover() {
     /* 全画面のまま扉に戻ると上の帯が無くて迷うので、戻しておく */
     root.removeAttribute('data-immersive');
     if (coverEl) coverEl.hidden = false;
+    sowDust();
     if (view) { view.hidden = true; view.innerHTML = ''; }
     if (topTitle) topTitle.textContent = '';
     if (tocEl) renderToc(tocEl, -1);
@@ -523,11 +545,13 @@
     var hint = view ? view.querySelector('.pager__hint') : null;
     if (!num || !pageW) return;
     var p = n === undefined ? curPage() : n, total = pageCount();
-    num.textContent = (p + 1) + ' / ' + total;
+    /* この話の残りも出す。あと何ページか分かると、区切りまで読み進めやすい */
+    var rest = total - p - 1;
+    num.textContent = (p + 1) + ' / ' + total + (rest > 0 ? '・あと' + rest + 'ページ' : '');
     if (!hint) return;
     var atEnd = p >= total - 1, isLast = currentIndex === CH.length - 1;
     /* 最後のページだけ案内を変える。各話の感想はここに小さく一行だけ */
-    var html = '右へスライドで次へ・まん中で全画面';
+    var html = 'スライドで次へ・まん中で全画面';
     if (atEnd && isLast) html = '左側をタップで「了」へ';
     else if (atEnd && FEEDBACK) html = '<a href="' + esc(FEEDBACK) + '" target="_blank" rel="noopener">この' + DATA.unit + 'の感想をひとこと ›</a>';
     if (hint.getAttribute('data-html') !== html) { hint.innerHTML = html; hint.setAttribute('data-html', html); }
