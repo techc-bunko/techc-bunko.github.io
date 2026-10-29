@@ -336,6 +336,10 @@ button { font: inherit; color: inherit; }
 .others__list li { display: flex; justify-content: space-between; align-items: baseline; gap: .75rem; padding: .8rem .25rem; border-bottom: 1px solid var(--line-soft); }
 .others__title { font-family: var(--font-mincho); font-size: 1rem; letter-spacing: .06em; color: var(--ink); }
 .others__genre { font-size: .75rem; color: var(--ink-3); white-space: nowrap; }
+.others__list li:has(.others__link) { padding: 0; }
+.others__link { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .25rem .75rem; width: 100%; padding: .8rem .25rem; color: inherit; text-decoration: none; }
+.others__go { flex: 0 0 100%; font-size: .8rem; font-weight: 700; color: var(--accent); }
+.others__link:hover .others__title, .others__link:focus-visible .others__title { color: var(--accent); }
 
 /* ---------- 縦組み ----------
    見出しから本文までを一枚の面（.chapter__stage）にまとめ、その面ごと

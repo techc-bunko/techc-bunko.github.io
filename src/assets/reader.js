@@ -116,6 +116,7 @@
   var LOCKED = !!DATA.locked;
   var FEEDBACK = DATA.feedbackUrl || '';
   var OTHERS = DATA.others || [];
+  var OWNED = (function () { try { return JSON.parse(store.get('yomi.owned') || '[]'); } catch (e) { return []; } })();
   var view = document.getElementById('view');
   var tocEl = document.getElementById('toc');
   var coverEl = document.getElementById('cover');
@@ -260,12 +261,18 @@
                 '<a class="btn btn--primary btn--block" href="' + esc(FEEDBACK) +
                 '" target="_blank" rel="noopener">感想を送る</a></div>'
               : '') +
-            /* ほかの作品は題名とジャンルだけ。リンクは付けない（買っていない作品が読めてしまうため） */
+            /* ほかの作品はふだん題名とジャンルだけ（買っていない作品が読めてしまうため）。
+               まとめ売りの入口を通った端末でだけリンクにする */
             (OTHERS.length
               ? '<div class="others"><p class="others__label">ところてん文庫のほかの作品</p><ul class="others__list">' +
                 OTHERS.map(function (o) {
-                  return '<li><span class="others__title">' + esc(o.title) + '</span>' +
-                    (o.genre ? '<span class="others__genre">' + esc(o.genre) + '</span>' : '') + '</li>';
+                  var inner = '<span class="others__title">' + esc(o.title) + '</span>' +
+                    (o.genre ? '<span class="others__genre">' + esc(o.genre) + '</span>' : '');
+                  if (OWNED.indexOf(o.slug) >= 0 && o.path) {
+                    return '<li><a class="others__link" href="../' + esc(o.path) + '/">' + inner +
+                      '<span class="others__go">読む →</span></a></li>';
+                  }
+                  return '<li>' + inner + '</li>';
                 }).join('') + '</ul></div>'
               : '') +
             '</div>'

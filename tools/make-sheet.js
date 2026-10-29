@@ -71,7 +71,7 @@ function page(meta, title, chapters, url, qrSvg) {
   return `<section class="page" style="--bk:${esc(meta.accent)}">
   <div class="band"></div>
   <div class="meta">${esc(meta.colorName)}　${esc(meta.genre)}</div>
-  <h1 class="title">${esc(title)}</h1>
+  <h1 class="title">${title.split("／").map(esc).join("<br>")}</h1>
   ${meta.cardCatch ? `<p class="catch">${esc(meta.cardCatch)}</p>` : ''}
   <div class="qr">${qrSvg}</div>
   <p class="lead">スマートフォンのカメラで読み取ってください</p>

@@ -394,7 +394,13 @@ ${accents}
 </style>
 ${THEME_BOOT}
 </head>
-<body class="top-page">
+<body class="top-page">${
+  opt.only
+    ? `
+<script>/* まとめ売りの入口を開いた端末に、収録作を覚えさせる（最終話の「ほかの作品」をリンクにするため） */
+try{var k='yomi.owned',o=JSON.parse(localStorage.getItem(k)||'[]');${JSON.stringify(opt.only)}.forEach(function(s){if(o.indexOf(s)<0)o.push(s)});localStorage.setItem(k,JSON.stringify(o))}catch(e){}</script>`
+    : ''
+}
 <header class="topbar">
   <div class="topbar__in">
     <span class="topbar__home">${esc(siteName)}</span>
@@ -500,9 +506,9 @@ function lockPayload(ck, payload) {
 function buildPage(work, meta, cfg, outDir, others) {
   const chapters = work.chapters;
   const unit = meta.unit || '章';
-  /* 最終話の下に出す「ほかの作品」。題名とジャンルだけで、リンクは付けない
-     （鍵が無いので、リンクを置くと買っていない作品まで読めてしまう） */
-  others = (others || []).map((o) => ({ title: o.title, genre: o.genre || '' }));
+  /* 最終話の下に出す「ほかの作品」。ふだんは題名とジャンルだけ。
+     まとめ売りの入口を通った端末でだけ、reader.js がリンクに変える */
+  others = (others || []).map((o) => ({ slug: o.slug, path: o.path, title: o.title, genre: o.genre || '' }));
 
   const keyFile = path.join(SRC, 'keys', meta.slug + '.key');
   const wrapFile = path.join(SRC, 'keys', meta.slug + '.json');
@@ -748,6 +754,7 @@ self.addEventListener('fetch', function (e) {
   /* 「ほかの作品」の案内に使うので、先に全作品の題名を読んでおく */
   const allTitles = works.map((m) => ({
     slug: m.slug,
+    path: m.path || '',
     genre: m.genre,
     title: parseRaw(fs.readFileSync(path.join(SRC, 'raw', m.slug + '.txt'), 'utf8')).title,
   }));

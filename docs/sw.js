@@ -1,12 +1,12 @@
 /* オフライン用 Service Worker（自動生成：手で編集しない） */
 'use strict';
 var NS = 'yomi-index-';
-var V = NS + '6c3111b9';
+var V = NS + '0c5405a5';
 var PRECACHE = [
   "./",
   "./index.html",
-  "./assets/style.css?v=7822c9ff",
-  "./assets/reader.js?v=7822c9ff"
+  "./assets/style.css?v=79244ffa",
+  "./assets/reader.js?v=79244ffa"
 ];
 
 self.addEventListener('install', function (e) {
