@@ -144,7 +144,10 @@ function accentBlock(accent) {
 function renderParagraph(text) {
   /* 会話文・記号で始まる行は CSS の字下げを効かせない */
   const cls = /^[「『（(―ー—…※【〈《\s　]/.test(text) ? ' class="noindent"' : '';
-  return `<p${cls}>${esc(text)}</p>`;
+  /* 2けたの数字（21歳など）は、縦組みで横に並べて1字ぶんにする（縦中横）。
+     文字は変えず、包むだけ。横組みでは見た目は変わらない */
+  const body = esc(text).replace(/(^|[^0-9])([0-9]{2})(?![0-9])/g, '$1<span class="tcy">$2</span>');
+  return `<p${cls}>${body}</p>`;
 }
 
 /* 1話ぶんの本文だけ（見出しは reader.js 側で組む） */

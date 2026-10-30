@@ -144,6 +144,8 @@ button { font: inherit; color: inherit; }
 /* ---------- ヘッダー ---------- */
 .topbar {
   position: sticky; top: 0; z-index: 40;
+  /* color-mix が使えない古い iPhone（iOS 16.1 まで）では、帯が透けて本文と重なるので先に地の色を敷く */
+  background: var(--bg);
   background: color-mix(in srgb, var(--bg) 88%, transparent);
   backdrop-filter: saturate(1.4) blur(12px);
   -webkit-backdrop-filter: saturate(1.4) blur(12px);
@@ -168,6 +170,9 @@ button { font: inherit; color: inherit; }
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   padding-left: .25rem;
 }
+/* 一覧のページは帯に長い名前（3作まとめの題名）が入る。幅の狭いスマホで
+   横にはみ出さないよう、入りきらない分は「…」にする */
+.top-page .topbar__home { display: block; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .topbar__tools { display: flex; align-items: center; gap: .25rem; margin-right: -.4rem; }
 .iconbtn {
   display: inline-flex; align-items: center; justify-content: center;
@@ -244,7 +249,8 @@ button { font: inherit; color: inherit; }
 .cover__tagline,
 .cover__stat    { animation: cover-in .8s .75s ease-out both; }
 .cover__vline   { animation: cover-grow-y 1s .95s ease-out both; }
-@keyframes cover-in     { from { opacity: 0; transform: translateY(.6rem); filter: blur(3px); } to { opacity: 1; transform: none; filter: none; } }
+/* ぼかし（blur）は使わない。iPhone では動き終わったあとも題名がにじんだまま残ることがあるため */
+@keyframes cover-in     { from { opacity: 0; transform: translateY(.6rem); } to { opacity: 1; transform: none; } }
 @keyframes cover-grow-x { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 @keyframes cover-grow-y { from { transform: scaleY(0); opacity: 0; } to { transform: scaleY(1); opacity: 1; } }
 
@@ -334,7 +340,11 @@ button { font: inherit; color: inherit; }
   display: grid; grid-template-columns: 1fr auto 1fr; gap: .5rem; align-items: center;
   margin-top: 3.5rem; padding-top: 1.75rem; border-top: 1px solid var(--line-soft);
 }
-.chapter__nav .btn { min-width: 0; }
+.chapter__nav .btn { min-width: 0; white-space: nowrap; }
+/* 幅の狭いスマホ（Android の 360px、小さい iPhone）で「← 前の話」が2行に折れないよう詰める */
+@media (max-width: 400px) {
+  .chapter__nav .btn { padding: 0 .8rem; font-size: .875rem; }
+}
 .chapter__nav .navprev { justify-self: start; }
 .chapter__nav .navnext { justify-self: end; }
 .chapter__nav .navtoc { justify-self: center; }
@@ -445,6 +455,8 @@ button { font: inherit; color: inherit; }
    面は画面いっぱいの高さなので、操作列はその下に常に見えている */
 [data-paged="1"] .chapter__nav {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 55;
+  /* .wrap の幅が残ると、帯が画面の右はしまで届かず、すき間から本文が見える */
+  width: auto;
   margin: 0;
   padding: .6rem max(1.25rem, env(safe-area-inset-left))
            calc(.6rem + env(safe-area-inset-bottom))
@@ -481,6 +493,7 @@ button { font: inherit; color: inherit; }
   transform-origin: top;
 }
 [data-writing="vertical"] .chapter__time { margin: 1.25rem 0 0; }
+[data-writing="vertical"] .tcy { text-combine-upright: all; -webkit-text-combine: horizontal; }
 
 [data-writing="vertical"] .chapter__body {
   height: 100%;
@@ -511,6 +524,8 @@ button { font: inherit; color: inherit; }
   letter-spacing: .04em;
 }
 .pager__num { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--accent); font-weight: 600; }
+.pager__hint { min-width: 0; }
+.pager__hint .nw { display: inline-block; white-space: nowrap; }
 .pager__hint a { color: var(--ink-3); text-decoration: underline; text-underline-offset: .2em; }
 
 /* 縦組みで最終話の「了」まで送ったとき、固定した操作列の裏に隠れないように。
@@ -579,6 +594,10 @@ button { font: inherit; color: inherit; }
   padding: 1.1rem 1.15rem 1.25rem;
   border: 1px solid var(--line); border-radius: var(--radius-lg);
   background: var(--bg); box-shadow: var(--shadow);
+  /* 背の低いスマホでは下の段が画面の外に出るので、パネルの中でスクロールさせる */
+  max-height: calc(100vh - 4.5rem);
+  max-height: calc(100svh - 4.5rem);
+  overflow-y: auto; overscroll-behavior: contain;
 }
 .panel[hidden] { display: none !important; }
 .panel__row + .panel__row { margin-top: 1.1rem; padding-top: 1.1rem; border-top: 1px solid var(--line-soft); }
@@ -588,7 +607,10 @@ button { font: inherit; color: inherit; }
   flex: 1 1 0; min-height: 2.1rem; padding: 0 .4rem;
   border: 0; border-radius: 7px; background: transparent; cursor: pointer;
   font-size: .8125rem; color: var(--ink-2);
+  white-space: nowrap;
 }
+/* 幅 320px の iPhone で「生成り」「セピア」が2行に折れないように */
+@media (max-width: 360px) { .seg button { padding: 0 .15rem; font-size: .75rem; } }
 .seg button[aria-pressed="true"] { background: var(--bg); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
 .panel__note { margin: .9rem 0 0; font-size: .75rem; color: var(--ink-3); line-height: 1.8; }
 

@@ -72,6 +72,8 @@
      ============================================================ */
   var panel = document.getElementById('panel');
   var panelBtn = document.getElementById('panel-btn');
+  /* パネルを閉じるためのタップで、本文の全画面まで切り替わらないように時刻を覚える */
+  var panelClosedAt = 0;
 
   function syncPanel() {
     if (!panel) return;
@@ -108,6 +110,13 @@
       else if ((key === 'size' || key === 'font') && DATA && paged()) restoreScroll(false);
     });
     document.addEventListener('click', function () { openPanel(false); });
+    /* iPhone は、ボタンでもリンクでもない所をタップしても click が届かないので、
+       パネルの外に指が触れた時点で閉じる */
+    document.addEventListener('pointerdown', function (e) {
+      if (panel.hidden || panel.contains(e.target) || panelBtn.contains(e.target)) return;
+      openPanel(false);
+      panelClosedAt = Date.now();
+    });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') openPanel(false); });
   }
 
@@ -255,8 +264,9 @@
           '<div class="chapter__num' + (c.title ? '' : ' chapter__num--big') + '">' + esc(c.num) + '</div>' +
           (c.title ? '<h1 class="chapter__title">' + esc(c.title) + '</h1>' : '') +
           '<div class="chapter__rule"></div>' +
-          '<div class="chapter__time">この' + DATA.unit + ' 約' + minutes(chars(i)) + '分' +
-            (last ? '' : '・最後まで 約' + minutes(restChars(i)) + '分') + '</div>' +
+          /* 数字は縦組みでも横に並べて1字ぶんに収める（縦中横） */
+          '<div class="chapter__time">この' + DATA.unit + ' 約<span class="tcy">' + minutes(chars(i)) + '</span>分' +
+            (last ? '' : '・最後まで 約<span class="tcy">' + minutes(restChars(i)) + '</span>分') + '</div>' +
           '</header>' +
           '<div class="chapter__body">' + c.html + '</div>' +
         '</div></div>' +
@@ -427,7 +437,10 @@
 
   function updateToTop() {
     if (!toTopEl) return;
-    toTopEl.hidden = currentIndex < 0 || toTopAway() < 500;
+    /* 最終話の「了」まで来たら出さない（「感想を送る」のボタンに重なるため） */
+    var fin = view ? view.querySelector('.fin') : null;
+    var atFin = fin && fin.getBoundingClientRect().top < window.innerHeight;
+    toTopEl.hidden = currentIndex < 0 || toTopAway() < 500 || !!atFin;
   }
 
   if (toTopEl) {
@@ -461,6 +474,16 @@
     }
     onScroll();
   }, { passive: true });
+  /* 明朝などの文字が遅れて届くと、1ページに入る量が変わる。届いたらページを組み直す */
+  if (document.fonts && document.fonts.addEventListener) {
+    document.fonts.addEventListener('loadingdone', function () {
+      var el = bodyEl();
+      if (currentIndex < 0 || !paged() || !el || !pageW) return;
+      var p = curPage();
+      layoutPages();
+      goPage(p, true);
+    });
+  }
 
   /* ---------- 縦組みはページめくり ---------- */
   /* 縦組みの面は指でスクロールさせず、スライドかタップで1ページずつ送る。
@@ -484,6 +507,10 @@
     if (!el) return;
     var head = el.querySelector('.chapter__head');
     var flow = el.querySelector('.chapter__flow');
+    var body = el.querySelector('.chapter__body');
+    var breaks = el.querySelectorAll('.chapter__body .break');
+    if (body) body.style.lineHeight = '';
+    breaks.forEach(function (b) { b.style.width = ''; });
     if (prefs.writing !== 'vertical') {
       /* 横組みに戻したときは、縦組み用に足した寸法を外す */
       el.style.height = el.style.paddingLeft = el.style.paddingRight = el.style.clipPath = '';
@@ -505,6 +532,17 @@
     var h = Math.min(window.innerHeight - top - below, cap);
     el.style.height = Math.max(240, h) + 'px';
     if (prefs.writing !== 'vertical') { layoutColumns(el, flow); return; }
+
+    /* 行の幅を整数の px にそろえる。iPhone（Safari）は 28.9px のような行の幅を
+       28px に切り捨てて並べるので、計算上の幅とずれ、めくるたびに行が少しずつ
+       ずれて、数ページ先で次の行が端に半分のぞいていた */
+    if (body) {
+      var lh = Math.round(parseFloat(getComputedStyle(body).lineHeight) || 0);
+      if (lh) {
+        body.style.lineHeight = lh + 'px';
+        breaks.forEach(function (b) { b.style.width = lh + 'px'; });
+      }
+    }
 
     /* 幅：左右の余白を、表示する幅が行の幅の倍数になるよう決める */
     var pitch = linePitch(el);
@@ -654,7 +692,8 @@
     if (!hint) return;
     var atEnd = p >= total - 1, isLast = currentIndex === CH.length - 1;
     /* 最後のページだけ案内を変える。各話の感想はここに小さく一行だけ */
-    var html = 'スライドで次へ・まん中で全画面';
+    /* 狭い画面で2行になるときは「・」の後ろで折る（「全／画面」のように切れないように） */
+    var html = '<span class="nw">スライドで次へ・</span><span class="nw">まん中で全画面</span>';
     if (atEnd && isLast) html = (prefs.writing === 'vertical' ? '左' : '右') + '側をタップで「了」へ';
     else if (atEnd && FEEDBACK) html = '<a href="' + esc(FEEDBACK) + '" target="_blank" rel="noopener">この' + DATA.unit + 'の感想をひとこと ›</a>';
     if (hint.getAttribute('data-html') !== html) { hint.innerHTML = html; hint.setAttribute('data-html', html); }
@@ -685,8 +724,8 @@
 
     el.addEventListener('pointerdown', function (e) {
       active++;
-      /* 二本指は拡大なので、めくらない */
-      cancel = active > 1;
+      /* 二本指は拡大なので、めくらない。設定パネルを閉じるためのタップでもめくらない */
+      cancel = active > 1 || !!(panel && !panel.hidden);
       sx = e.clientX; sy = e.clientY; st = Date.now();
     });
     var end = function (e) {
@@ -714,7 +753,7 @@
     bindPager(el);
     /* 横組みは本文をタップして全画面に。文字を選んでいるときやリンクは除く */
     el.addEventListener('click', function (e) {
-      if (paged() || e.target.closest('a')) return;
+      if (paged() || e.target.closest('a') || Date.now() - panelClosedAt < 800) return;
       var sel = window.getSelection && window.getSelection();
       if (sel && String(sel).length) return;
       toggleImmersive();
