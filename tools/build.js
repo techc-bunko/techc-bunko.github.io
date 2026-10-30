@@ -234,10 +234,11 @@ const SW_REGISTER =
   `addEventListener('load',function(){navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'})` +
   `.catch(function(){})})}</script>`;
 
-/* 明暗の初期値をCSSより先に当てて、暗い設定の人の「白い一瞬」を消す */
+/* 紙の色の初期値をCSSより先に当てて、暗い設定の人の「白い一瞬」を消す。
+   何も選んでいない人は生成り（クリーム色） */
 const THEME_BOOT =
   `<script>(function(){try{var p=JSON.parse(localStorage.getItem('yomi.prefs')||'{}');` +
-  `var t=p.theme||'auto';if(t==='auto')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';` +
+  `var t=p.theme||'kinari';if(t==='auto')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';` +
   `var d=document.documentElement;d.setAttribute('data-theme',t);` +
   `d.setAttribute('data-size',String(p.size==null?2:p.size));` +
   `d.setAttribute('data-font',p.font||'mincho');` +
@@ -380,13 +381,13 @@ function buildIndex(cfg, all, opt = {}) {
   const desc = built.map((b) => b.title).join('／') + ' — ' + cfg.author + 'のオリジナル短編。全編無料。';
 
   const html = `<!doctype html>
-<html lang="ja" data-theme="light" data-size="2" data-font="mincho" data-writing="horizontal">
+<html lang="ja" data-theme="kinari" data-size="2" data-font="mincho" data-writing="horizontal">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(siteName)}</title>
 <meta name="description" content="${esc(desc)}">
-<meta name="theme-color" content="#ffffff">${NOINDEX(cfg)}
+<meta name="theme-color" content="#f8f3e7">${NOINDEX(cfg)}
 ${ICON_LINK}${appleIcon}
 ${ogpTags(cfg, { path: opt.path || '' }, { title: siteName, desc, image: ogImage })}
 ${FONTS}
@@ -448,12 +449,12 @@ ${SW_REGISTER}
    ============================================================ */
 function build404(cfg) {
   const html = `<!doctype html>
-<html lang="ja" data-theme="light" data-size="2" data-font="mincho" data-writing="horizontal">
+<html lang="ja" data-theme="kinari" data-size="2" data-font="mincho" data-writing="horizontal">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ページが見つかりません</title>
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#f8f3e7">
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 ${FONTS}
@@ -576,13 +577,13 @@ function buildPage(work, meta, cfg, outDir, others) {
   const desc = meta.tagline || `${title} — ${meta.genre}。全${chapters.length}${unit}。`;
 
   const html = `<!doctype html>
-<html lang="ja" data-theme="light" data-size="2" data-font="mincho" data-writing="horizontal">
+<html lang="ja" data-theme="kinari" data-size="2" data-font="mincho" data-writing="horizontal">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(desc)}">
-<meta name="theme-color" content="#ffffff">${NOINDEX(cfg)}
+<meta name="theme-color" content="#f8f3e7">${NOINDEX(cfg)}
 <link rel="manifest" href="./manifest.webmanifest">
 ${ICON_LINK}${appleIcon}
 ${ogpTags(cfg, meta, { title, desc, image: ogImage })}

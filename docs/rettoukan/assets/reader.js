@@ -27,7 +27,7 @@
   var root = document.documentElement;
 
   /* ---------- 表示設定 ---------- */
-  var DEFAULTS = { theme: 'auto', size: 2, font: 'mincho', writing: 'horizontal', paging: 'scroll' };
+  var DEFAULTS = { theme: 'kinari', size: 2, font: 'mincho', writing: 'horizontal', paging: 'scroll' };
   var prefs = (function () {
     var p = {};
     try { p = JSON.parse(store.get(K_PREFS) || '{}') || {}; } catch (e) { p = {}; }
@@ -320,10 +320,17 @@
   function restChars(i) { var n = 0; for (var k = i; k < CH.length; k++) n += chars(k); return n; }
 
   /* 「了」が画面に入ったら、余韻の動き（作品名・線・粒）を一度だけ始める */
+  var finGo = null;
   function watchFin() {
     var fin = view.querySelector('.fin');
+    finGo = null;
     if (!fin) return;
-    var go = function () { fin.classList.add('is-in'); sowDust(fin.querySelector('.cover__dust')); };
+    var go = function () {
+      if (fin.classList.contains('is-in')) return;
+      fin.classList.add('is-in'); sowDust(fin.querySelector('.cover__dust'));
+    };
+    /* 画面に入ったかの知らせが来ない端末のために、スクロールのたびにも確かめる */
+    finGo = function () { var r = fin.getBoundingClientRect(); if (r.top < window.innerHeight * .75 && r.bottom > 0) go(); };
     if (!window.IntersectionObserver) { go(); return; }
     var io = new IntersectionObserver(function (es) {
       if (es.some(function (e) { return e.isIntersecting; })) { io.disconnect(); go(); }
@@ -397,6 +404,7 @@
       store.set(kScroll(), String(window.scrollY));
     }
     updateToTop();
+    if (finGo) finGo();
   }
 
   /* ---------- 先頭へ戻る ---------- */

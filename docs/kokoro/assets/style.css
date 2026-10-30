@@ -361,11 +361,14 @@ button { font: inherit; color: inherit; }
 .fin__glow > *:not(.cover__dust):not(.fin__line), .fin__note { opacity: 0; }
 .fin__glow .fin__mark { font-size: 2rem; }
 .fin__line { transform: scaleX(0); }
+/* 余韻の文字はぼかしを使わない（iPhone では、ぼかしから戻したあとも
+   文字がにじんだまま残ることがあったため）。透明から出すだけにする */
 .fin.is-in .fin__mark { animation: fin-mark 1.1s ease-out both; }
-.fin.is-in .fin__work { animation: cover-in .9s .5s ease-out both; }
+.fin.is-in .fin__work { animation: fin-in .9s .5s ease-out both; }
 .fin.is-in .fin__line { animation: cover-grow-x .8s .9s ease-out both; }
-.fin.is-in .fin__note { animation: cover-in .8s 1.2s ease-out both; }
-@keyframes fin-mark { from { opacity: 0; transform: scale(1.6); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+.fin.is-in .fin__note { animation: fin-in .8s 1.2s ease-out both; }
+@keyframes fin-mark { from { opacity: 0; transform: scale(1.6); } to { opacity: 1; transform: none; } }
+@keyframes fin-in { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
   .fin__glow > *:not(.cover__dust):not(.fin__line), .fin__note { opacity: 1; }
   .fin__line { transform: none; }
