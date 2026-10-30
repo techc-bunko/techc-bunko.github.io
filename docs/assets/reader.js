@@ -328,6 +328,9 @@
     var go = function () {
       if (fin.classList.contains('is-in')) return;
       fin.classList.add('is-in'); sowDust(fin.querySelector('.cover__dust'));
+      /* 動き終わったら動きの設定ごと外す。iPhone は動きのあいだ文字を粗い絵にして
+         動かすので、外さないと終わったあとも作品名がにじんだまま残る */
+      setTimeout(function () { fin.classList.add('is-done'); }, 2400);
     };
     /* 画面に入ったかの知らせが来ない端末のために、スクロールのたびにも確かめる */
     finGo = function () { var r = fin.getBoundingClientRect(); if (r.top < window.innerHeight * .75 && r.bottom > 0) go(); };

@@ -369,6 +369,9 @@ button { font: inherit; color: inherit; }
 .fin.is-in .fin__note { animation: fin-in .8s 1.2s ease-out both; }
 @keyframes fin-mark { from { opacity: 0; transform: scale(1.6); } to { opacity: 1; transform: none; } }
 @keyframes fin-in { from { opacity: 0; } to { opacity: 1; } }
+.fin.is-done .fin__mark, .fin.is-done .fin__work, .fin.is-done .fin__line, .fin.is-done .fin__note {
+  animation: none; opacity: 1; transform: none;
+}
 @media (prefers-reduced-motion: reduce) {
   .fin__glow > *:not(.cover__dust):not(.fin__line), .fin__note { opacity: 1; }
   .fin__line { transform: none; }
