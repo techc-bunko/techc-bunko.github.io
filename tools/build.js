@@ -241,7 +241,8 @@ const THEME_BOOT =
   `var d=document.documentElement;d.setAttribute('data-theme',t);` +
   `d.setAttribute('data-size',String(p.size==null?2:p.size));` +
   `d.setAttribute('data-font',p.font||'mincho');` +
-  `d.setAttribute('data-writing',p.writing||'horizontal');}catch(e){}})()</script>`;
+  `d.setAttribute('data-writing',p.writing||'horizontal');` +
+  `d.setAttribute('data-paged',p.writing==='vertical'||p.paging==='page'?'1':'0');}catch(e){}})()</script>`;
 
 /* ---------- 共通パーツ ---------- */
 const ICON_SETTINGS =
@@ -271,10 +272,11 @@ function settingsPanel() {
         .join('')}</div>
     </div>`;
   return `<div class="panel" id="panel" hidden>
-  ${seg('明るさ', 'theme', [['auto', '端末に合わせる'], ['light', '明'], ['dark', '暗']])}
+  ${seg('紙の色', 'theme', [['auto', '自動'], ['light', '白'], ['kinari', '生成り'], ['sepia', 'セピア'], ['dark', '暗']])}
   ${seg('文字の大きさ', 'size', [['0', '小'], ['1', '中小'], ['2', '標準'], ['3', '中大'], ['4', '大']])}
   ${seg('書体', 'font', [['mincho', '明朝'], ['gothic', 'ゴシック']])}
   ${seg('組み方', 'writing', [['horizontal', '横組み'], ['vertical', '縦組み']])}
+  ${seg('横組みの読み方', 'paging', [['scroll', 'スクロール'], ['page', 'ページめくり']])}
   <p class="panel__note">設定はこの端末に保存され、どの作品にも適用されます。</p>
 </div>`;
 }

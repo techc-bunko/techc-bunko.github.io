@@ -21,7 +21,7 @@
 <meta name="twitter:description" content="劣等感は味方／心の罪／私が、私になる日 — tech.Cのオリジナル短編。全編無料。">
 <meta name="twitter:image" content="https://techc-bunko.github.io/zenshu/og.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600&display=swap">
-<link rel="stylesheet" href="./assets/style.css?v=79244ffa">
+<link rel="stylesheet" href="./assets/style.css?v=6e6e09f6">
 <style>
 .a-rettoukan{--accent-raw:#3f7f8c;--accent:#3f7f8c}
 [data-theme="dark"] .a-rettoukan{--accent-raw:#82acb4;--accent:#82acb4}
@@ -30,7 +30,7 @@
 .a-watashi{--accent-raw:#b07030;--accent:#9c632a}
 [data-theme="dark"] .a-watashi{--accent-raw:#cca278;--accent:#cca278}
 </style>
-<script>(function(){try{var p=JSON.parse(localStorage.getItem('yomi.prefs')||'{}');var t=p.theme||'auto';if(t==='auto')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';var d=document.documentElement;d.setAttribute('data-theme',t);d.setAttribute('data-size',String(p.size==null?2:p.size));d.setAttribute('data-font',p.font||'mincho');d.setAttribute('data-writing',p.writing||'horizontal');}catch(e){}})()</script>
+<script>(function(){try{var p=JSON.parse(localStorage.getItem('yomi.prefs')||'{}');var t=p.theme||'auto';if(t==='auto')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';var d=document.documentElement;d.setAttribute('data-theme',t);d.setAttribute('data-size',String(p.size==null?2:p.size));d.setAttribute('data-font',p.font||'mincho');d.setAttribute('data-writing',p.writing||'horizontal');d.setAttribute('data-paged',p.writing==='vertical'||p.paging==='page'?'1':'0');}catch(e){}})()</script>
 </head>
 <body class="top-page">
 <script>/* まとめ売りの入口を開いた端末に、収録作を覚えさせる（最終話の「ほかの作品」をリンクにするため） */
@@ -98,8 +98,8 @@ try{var k='yomi.owned',o=JSON.parse(localStorage.getItem(k)||'[]');["rettoukan",
 </footer>
 <div class="panel" id="panel" hidden>
   <div class="panel__row">
-      <div class="panel__label">明るさ</div>
-      <div class="seg"><button type="button" data-pref="theme" data-value="auto" aria-pressed="false">端末に合わせる</button><button type="button" data-pref="theme" data-value="light" aria-pressed="false">明</button><button type="button" data-pref="theme" data-value="dark" aria-pressed="false">暗</button></div>
+      <div class="panel__label">紙の色</div>
+      <div class="seg"><button type="button" data-pref="theme" data-value="auto" aria-pressed="false">自動</button><button type="button" data-pref="theme" data-value="light" aria-pressed="false">白</button><button type="button" data-pref="theme" data-value="kinari" aria-pressed="false">生成り</button><button type="button" data-pref="theme" data-value="sepia" aria-pressed="false">セピア</button><button type="button" data-pref="theme" data-value="dark" aria-pressed="false">暗</button></div>
     </div>
   <div class="panel__row">
       <div class="panel__label">文字の大きさ</div>
@@ -113,9 +113,13 @@ try{var k='yomi.owned',o=JSON.parse(localStorage.getItem(k)||'[]');["rettoukan",
       <div class="panel__label">組み方</div>
       <div class="seg"><button type="button" data-pref="writing" data-value="horizontal" aria-pressed="false">横組み</button><button type="button" data-pref="writing" data-value="vertical" aria-pressed="false">縦組み</button></div>
     </div>
+  <div class="panel__row">
+      <div class="panel__label">横組みの読み方</div>
+      <div class="seg"><button type="button" data-pref="paging" data-value="scroll" aria-pressed="false">スクロール</button><button type="button" data-pref="paging" data-value="page" aria-pressed="false">ページめくり</button></div>
+    </div>
   <p class="panel__note">設定はこの端末に保存され、どの作品にも適用されます。</p>
 </div>
-<script src="./assets/reader.js?v=79244ffa" defer></script>
+<script src="./assets/reader.js?v=6e6e09f6" defer></script>
 <script>if('serviceWorker' in navigator&&location.protocol!=='file:'){addEventListener('load',function(){navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).catch(function(){})})}</script>
 </body>
 </html>

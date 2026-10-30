@@ -4,7 +4,7 @@
    docs/assets/reader.js は生成物なので直接編集しないこと。
 
    このファイルがやること:
-     1. 表示設定（明暗・文字サイズ・本文フォント・縦横）の保存と適用
+     1. 表示設定（紙の色・文字サイズ・本文フォント・縦横・横組みの読み方）の保存と適用
      2. 1話ずつ表示するルーティング（#c1, #c2 …）と読書位置の復元
      3. 目次・既読の表示と「続きから読む」
 
@@ -27,7 +27,7 @@
   var root = document.documentElement;
 
   /* ---------- 表示設定 ---------- */
-  var DEFAULTS = { theme: 'auto', size: 2, font: 'mincho', writing: 'horizontal' };
+  var DEFAULTS = { theme: 'auto', size: 2, font: 'mincho', writing: 'horizontal', paging: 'scroll' };
   var prefs = (function () {
     var p = {};
     try { p = JSON.parse(store.get(K_PREFS) || '{}') || {}; } catch (e) { p = {}; }
@@ -43,9 +43,15 @@
     root.setAttribute('data-size', String(prefs.size));
     root.setAttribute('data-font', prefs.font);
     root.setAttribute('data-writing', prefs.writing);
+    root.setAttribute('data-paged', paged() ? '1' : '0');
     var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', theme === 'dark' ? '#16171b' : '#ffffff');
+    if (meta) meta.setAttribute('content', PAPER[theme] || '#ffffff');
   }
+  /* 上の帯の色（iPhone のアドレスバーの色）を紙の色に合わせる */
+  var PAPER = { light: '#ffffff', kinari: '#f8f3e7', sepia: '#efe2c6', dark: '#16171b' };
+  /* ページめくりで読むか。縦組みはいつもページめくり、横組みは設定で選ぶ */
+  function paged() { return prefs.writing === 'vertical' || prefs.paging === 'page'; }
+  function hPaged() { return prefs.writing !== 'vertical' && prefs.paging === 'page'; }
   function savePrefs() { store.set(K_PREFS, JSON.stringify(prefs)); applyPrefs(); syncPanel(); }
   if (darkQuery && darkQuery.addEventListener) {
     darkQuery.addEventListener('change', function () { if (prefs.theme === 'auto') applyPrefs(); });
@@ -96,10 +102,10 @@
       var val = b.getAttribute('data-value');
       prefs[key] = key === 'size' ? Number(val) : val;
       savePrefs();
-      /* 縦横を変えると面の向きごと変わるので、読書位置を取り直す。
-         縦組みは文字の大きさや書体でも1ページの行数が変わるので組み直す */
-      if (key === 'writing' && DATA) { negScroll = null; restoreScroll(false); }
-      else if ((key === 'size' || key === 'font') && DATA && prefs.writing === 'vertical') restoreScroll(false);
+      /* 縦横や読み方を変えると面の作りごと変わるので、読書位置を取り直す。
+         ページめくりは文字の大きさや書体でも1ページの行数が変わるので組み直す */
+      if ((key === 'writing' || key === 'paging') && DATA) { negScroll = null; restoreScroll(false); }
+      else if ((key === 'size' || key === 'font') && DATA && paged()) restoreScroll(false);
     });
     document.addEventListener('click', function () { openPanel(false); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') openPanel(false); });
@@ -155,6 +161,15 @@
     }).join('');
   }
 
+  /* ---------- 読む時間の目安 ---------- */
+  /* 小説を読む速さは1分に500字くらい。本文の字数から「約◯分」を出す */
+  var CPM = 500, charCache = {};
+  function chars(i) {
+    if (!(i in charCache)) charCache[i] = String(CH[i].html || '').replace(/<[^>]*>/g, '').replace(/\s/g, '').length;
+    return charCache[i];
+  }
+  function minutes(n) { return Math.max(1, Math.round(n / CPM)); }
+
   /* ---------- 画面の切り替え ---------- */
   var currentIndex = -1;   // -1 = 扉＋目次
 
@@ -177,8 +192,8 @@
 
   /* 扉の後ろで舞う粒（作品の色の小さな丸）。桜色メイドの花びらの代わり。
      数・大きさ・速さは少しずつばらつかせる。一度入れたら入れ直さない */
-  function sowDust() {
-    var box = coverEl ? coverEl.querySelector('.cover__dust') : null;
+  function sowDust(box) {
+    if (box === undefined) box = coverEl ? coverEl.querySelector('.cover__dust') : null;
     if (!box) return;
     box.style.setProperty('--fall', (box.offsetHeight + 24) + 'px');
     if (box.firstChild) return;
@@ -234,14 +249,17 @@
 
     view.innerHTML =
       '<article class="chapter">' +
-        '<div class="chapter__stage wrap">' +
+        '<div class="chapter__stage wrap"><div class="chapter__flow">' +
           '<header class="chapter__head">' +
-          '<div class="chapter__num">' + esc(c.num) + '</div>' +
+          /* 話数は本の章の扉のように大きく。章題のある作品は話数を小さく、章題を大きく */
+          '<div class="chapter__num' + (c.title ? '' : ' chapter__num--big') + '">' + esc(c.num) + '</div>' +
           (c.title ? '<h1 class="chapter__title">' + esc(c.title) + '</h1>' : '') +
           '<div class="chapter__rule"></div>' +
+          '<div class="chapter__time">この' + DATA.unit + ' 約' + minutes(chars(i)) + '分' +
+            (last ? '' : '・最後まで 約' + minutes(restChars(i)) + '分') + '</div>' +
           '</header>' +
           '<div class="chapter__body">' + c.html + '</div>' +
-        '</div>' +
+        '</div></div>' +
         /* 縦組みのときだけ見える。ページ数とめくり方（最後のページでは感想の一行に変わる） */
         '<div class="pager wrap"><span class="pager__hint"></span>' +
           '<span class="pager__num"></span></div>' +
@@ -253,7 +271,9 @@
             '" target="_blank" rel="noopener">この' + DATA.unit + 'の感想をひとこと ›</a></p>'
           : '') +
         (last
-          ? '<div class="fin wrap"><div class="fin__mark">了</div>' +
+          ? '<div class="fin wrap"><div class="fin__glow"><div class="cover__dust" aria-hidden="true"></div>' +
+            '<div class="fin__mark">了</div>' +
+            '<p class="fin__work">' + esc(DATA.title) + '</p><div class="fin__line"></div></div>' +
             '<p class="fin__note">最後までお読みいただき、ありがとうございました。</p>' +
             (FEEDBACK
               ? '<div class="fin__ask"><p class="fin__ask-lead">感想をお聞かせください</p>' +
@@ -289,16 +309,32 @@
     store.set(kPos(SLUG), String(i));
     restoreScroll(true);
     bindProgress();
+    watchFin();
     /* 明朝の読み込みで行数が変わるので、レイアウトが確定してからもう一度合わせる */
     var settle = function () { restoreScroll(true); };
     setTimeout(settle, 0);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(settle);
   }
 
+  /* この話から最後までの字数 */
+  function restChars(i) { var n = 0; for (var k = i; k < CH.length; k++) n += chars(k); return n; }
+
+  /* 「了」が画面に入ったら、余韻の動き（作品名・線・粒）を一度だけ始める */
+  function watchFin() {
+    var fin = view.querySelector('.fin');
+    if (!fin) return;
+    var go = function () { fin.classList.add('is-in'); sowDust(fin.querySelector('.cover__dust')); };
+    if (!window.IntersectionObserver) { go(); return; }
+    var io = new IntersectionObserver(function (es) {
+      if (es.some(function (e) { return e.isIntersecting; })) { io.disconnect(); go(); }
+    }, { threshold: .35 });
+    io.observe(fin);
+  }
+
   /* ---------- 読書位置 ---------- */
   /* 縦組みで横スクロールする器。見出しと本文をまとめた面そのもの */
   function bodyEl() { return view ? view.querySelector('.chapter__stage') : null; }
-  var kScroll = function () { return 'yomi.scroll.' + SLUG + '.' + currentIndex + '.' + prefs.writing; };
+  var kScroll = function () { return 'yomi.scroll.' + SLUG + '.' + currentIndex + '.' + prefs.writing + (hPaged() ? '.p' : ''); };
 
   /* 縦組み（vertical-rl）の scrollLeft の向きはエンジンによって2通りある。
      ・0 が先頭で、左へ進むほどマイナス（Chrome / Firefox の現行仕様）
@@ -323,6 +359,11 @@
       /* 保存してある位置を、いちばん近いページの頭にそろえる */
       goPage(saved === null || !pageW ? 0 : Math.round(Math.abs(Number(saved) - vStart(el)) / pageW), true);
       window.scrollTo(0, 0);
+    } else if (hPaged() && el) {
+      /* 横組みのページめくりは、何ページ目かをそのまま覚えている */
+      layoutPages();
+      goPage(Number(saved) || 0, true);
+      window.scrollTo(0, 0);
     } else {
       layoutPages();
       window.scrollTo(0, fresh ? Number(saved || 0) : window.scrollY);
@@ -345,6 +386,11 @@
       setProgress(negScroll ? -sl / max : (max - sl) / max);
       store.set(kScroll(), String(sl));
       updatePager();
+    } else if (hPaged() && el) {
+      var total = pageCount();
+      setProgress(total > 1 ? hPage / (total - 1) : 1);
+      store.set(kScroll(), String(hPage));
+      updatePager();
     } else {
       var h = document.documentElement.scrollHeight - window.innerHeight;
       setProgress(h > 0 ? window.scrollY / h : 1);
@@ -364,6 +410,7 @@
       if (negScroll === null) detectScrollDir(el);
       return Math.abs(el.scrollLeft - vStart(el));
     }
+    if (hPaged()) return 0;
     return window.scrollY;
   }
 
@@ -396,7 +443,7 @@
   window.addEventListener('resize', function () {
     /* 画面の向きや大きさが変わったら、今のページを保ったままページを組み直す */
     var el = bodyEl();
-    if (prefs.writing === 'vertical' && el && pageW) {
+    if (paged() && el && pageW) {
       var p = curPage();
       layoutPages();
       goPage(p, true);
@@ -411,6 +458,8 @@
      1ページの幅は「行の幅のちょうど何列ぶん」にして、ページの境目で
      行が半分に切れないようにする。 */
   var pageW = 0;
+  /* 横組みのページめくり：今のページと全部のページ数 */
+  var hPage = 0, hTotal = 1;
 
   /* 本文1行の幅（縦組みでは行が横に並ぶので、行の高さ＝列の幅） */
   function linePitch(el) {
@@ -423,13 +472,15 @@
     pageW = 0;
     if (!el) return;
     var head = el.querySelector('.chapter__head');
+    var flow = el.querySelector('.chapter__flow');
     if (prefs.writing !== 'vertical') {
       /* 横組みに戻したときは、縦組み用に足した寸法を外す */
       el.style.height = el.style.paddingLeft = el.style.paddingRight = el.style.clipPath = '';
       if (head) head.style.marginLeft = '';
       var f = el.querySelector('.page-fill');
       if (f) f.remove();
-      return;
+      if (flow) flow.style.cssText = '';
+      if (!hPaged() || !flow) return;
     }
 
     /* 高さ：面の上端から、下のページ数と固定した操作列の手前まで */
@@ -442,6 +493,7 @@
     var cap = window.innerWidth > 640 ? 42 * 16 : Infinity;
     var h = Math.min(window.innerHeight - top - below, cap);
     el.style.height = Math.max(240, h) + 'px';
+    if (prefs.writing !== 'vertical') { layoutColumns(el, flow); return; }
 
     /* 幅：左右の余白を、表示する幅が行の幅の倍数になるよう決める */
     var pitch = linePitch(el);
@@ -475,13 +527,37 @@
     pageW = inner;
   }
 
+  /* 横組みのページめくり。本文を「1段＝面の幅」の段組みにして、
+     段を横に並べる。1ページ送るごとに面の幅ぶん左へずらす */
+  function layoutColumns(el, flow) {
+    var side = 20, w = el.clientWidth, inner = w - side * 2;
+    if (inner < 120) return;
+    flow.style.transform = 'none';
+    flow.style.width = inner + 'px';
+    flow.style.marginLeft = side + 'px';
+    flow.style.columnWidth = inner + 'px';
+    flow.style.columnGap = side * 2 + 'px';
+    /* 最後の段がどこにあるかでページ数を数える */
+    var left = flow.getBoundingClientRect().left, right = left;
+    [el.querySelector('.chapter__head'), el.querySelector('.chapter__body')].forEach(function (t) {
+      if (!t) return;
+      var rs = t.getClientRects();
+      for (var k = 0; k < rs.length; k++) if (rs[k].width) right = Math.max(right, rs[k].right);
+    });
+    pageW = w;
+    hTotal = Math.max(1, Math.floor((right - left - 1) / w) + 1);
+    hPage = Math.min(hPage, hTotal - 1);
+  }
+
   function pageCount() {
     var el = bodyEl();
+    if (hPaged()) return el && pageW ? hTotal : 1;
     if (!el || !pageW) return 1;
     return Math.max(1, Math.ceil((el.scrollWidth - el.clientWidth - 1) / pageW) + 1);
   }
   function curPage() {
     var el = bodyEl();
+    if (hPaged()) return hPage;
     if (!el || !pageW) return 0;
     return Math.round(Math.abs(el.scrollLeft - vStart(el)) / pageW);
   }
@@ -492,7 +568,12 @@
     n = Math.max(0, Math.min(pageCount() - 1, n));
     var from = goTime && Date.now() - goTime < 700 ? goTarget : curPage();
     goTarget = n; goTime = Date.now();
-    el.scrollLeft = vStart(el) - n * pageW;
+    if (hPaged()) {
+      hPage = n;
+      var flow = el.querySelector('.chapter__flow');
+      if (flow) flow.style.transform = 'translateX(' + (-n * pageW) + 'px)';
+      updateProgress();
+    } else el.scrollLeft = vStart(el) - n * pageW;
     if (!instant && n !== from) turnEffect(el, n > from ? 1 : -1);
     updatePager(n);
   }
@@ -504,6 +585,8 @@
   var reduceMotion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
   function turnEffect(el, dir) {
     if ((reduceMotion && reduceMotion.matches) || !el.animate) return;
+    /* 横組みの本は右へ進むので、影とずれの向きが縦組みと逆になる */
+    if (prefs.writing !== 'vertical') dir = -dir;
     var host = el.parentNode;
     var shade = document.createElement('div');
     shade.className = 'turn-shade';
@@ -554,12 +637,14 @@
     var p = n === undefined ? curPage() : n, total = pageCount();
     /* この話の残りも出す。あと何ページか分かると、区切りまで読み進めやすい */
     var rest = total - p - 1;
-    num.textContent = (p + 1) + ' / ' + total + (rest > 0 ? '・あと' + rest + 'ページ' : '');
+    /* この話の残りの時間の目安も出す */
+    var mins = rest > 0 ? Math.max(1, Math.ceil(chars(currentIndex) * rest / total / CPM)) : 0;
+    num.textContent = (p + 1) + ' / ' + total + (rest > 0 ? '・あと' + rest + 'ページ（約' + mins + '分）' : '');
     if (!hint) return;
     var atEnd = p >= total - 1, isLast = currentIndex === CH.length - 1;
     /* 最後のページだけ案内を変える。各話の感想はここに小さく一行だけ */
     var html = 'スライドで次へ・まん中で全画面';
-    if (atEnd && isLast) html = '左側をタップで「了」へ';
+    if (atEnd && isLast) html = (prefs.writing === 'vertical' ? '左' : '右') + '側をタップで「了」へ';
     else if (atEnd && FEEDBACK) html = '<a href="' + esc(FEEDBACK) + '" target="_blank" rel="noopener">この' + DATA.unit + 'の感想をひとこと ›</a>';
     if (hint.getAttribute('data-html') !== html) { hint.innerHTML = html; hint.setAttribute('data-html', html); }
   }
@@ -571,7 +656,7 @@
     if (on) root.setAttribute('data-immersive', '1');
     else root.removeAttribute('data-immersive');
     var el = bodyEl();
-    if (prefs.writing === 'vertical' && el && pageW) {
+    if (paged() && el && pageW) {
       var p = goTime && Date.now() - goTime < 700 ? goTarget : curPage();
       layoutPages();
       goPage(p, true);
@@ -579,9 +664,10 @@
   }
   function toggleImmersive() { setImmersive(!root.hasAttribute('data-immersive')); }
 
-  /* スライドとタップを受け取る。
+  /* スライドとタップを受け取る。縦組み：
      ・右へスライド／左の3分の1をタップ → 次のページ（本は左へ進むので）
      ・左へスライド／右の3分の1をタップ → 前のページ
+     横組みは左右が逆（右へ進む）
      マウスでも同じように動くよう pointer イベントで受ける。 */
   function bindPager(el) {
     var sx = 0, sy = 0, st = 0, active = 0, cancel = false;
@@ -594,14 +680,15 @@
     });
     var end = function (e) {
       active = Math.max(0, active - 1);
-      if (cancel || prefs.writing !== 'vertical') return;
+      if (cancel || !paged()) return;
+      var fwd = prefs.writing === 'vertical' ? 1 : -1;
       var dx = e.clientX - sx, dy = e.clientY - sy;
       if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
-        flip(dx > 0 ? 1 : -1);
+        flip(dx > 0 ? fwd : -fwd);
       } else if (Math.abs(dx) < 10 && Math.abs(dy) < 10 && Date.now() - st < 400) {
         var r = el.getBoundingClientRect(), x = (e.clientX - r.left) / r.width;
-        if (x < 1 / 3) flip(1);
-        else if (x > 2 / 3) flip(-1);
+        if (x < 1 / 3) flip(fwd);
+        else if (x > 2 / 3) flip(-fwd);
         else toggleImmersive();
       }
     };
@@ -616,7 +703,7 @@
     bindPager(el);
     /* 横組みは本文をタップして全画面に。文字を選んでいるときやリンクは除く */
     el.addEventListener('click', function (e) {
-      if (prefs.writing === 'vertical' || e.target.closest('a')) return;
+      if (paged() || e.target.closest('a')) return;
       var sel = window.getSelection && window.getSelection();
       if (sel && String(sel).length) return;
       toggleImmersive();
@@ -645,9 +732,10 @@
     if (e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
     if (currentIndex < 0) return;
     /* 縦組みは矢印キーでページをめくる。本は左へ進むので ← が次 */
-    if (prefs.writing === 'vertical' && pageW) {
-      if (e.key === 'ArrowLeft') flip(1);
-      if (e.key === 'ArrowRight') flip(-1);
+    if (paged() && pageW) {
+      var fwd = prefs.writing === 'vertical' ? 1 : -1;
+      if (e.key === 'ArrowLeft') flip(fwd);
+      if (e.key === 'ArrowRight') flip(-fwd);
       return;
     }
     if (e.key === 'ArrowRight' && currentIndex + 1 < CH.length) location.hash = '#c' + (currentIndex + 2);

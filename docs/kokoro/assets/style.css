@@ -51,6 +51,29 @@
   --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -12px rgba(0, 0, 0, .7);
 }
 
+/* 紙の色（リーダー設定）。白より目が疲れにくい生成りとセピア。
+   明るい側の色なので、[data-theme="dark"] 以外の決まりはそのまま効く */
+[data-theme="kinari"] {
+  --bg: #f8f3e7;
+  --bg-soft: #f0e9d9;
+  --bg-sunk: #e8dfcb;
+  --line: #e0d6c1;
+  --line-soft: #ebe3d1;
+  --ink: #2b2620;
+  --ink-2: #5e5649;
+  --ink-3: #8c8372;
+}
+[data-theme="sepia"] {
+  --bg: #efe2c6;
+  --bg-soft: #e6d6b5;
+  --bg-sunk: #dccaa5;
+  --line: #d3bf98;
+  --line-soft: #e0cfab;
+  --ink: #3b2e1f;
+  --ink-2: #63523b;
+  --ink-3: #8a7658;
+}
+
 /* 本文フォントの切り替え（リーダー設定） */
 [data-font="gothic"] { --font-body: var(--font-ui); }
 
@@ -279,11 +302,17 @@ button { font: inherit; color: inherit; }
 .chapter { padding-top: 1.5rem; }
 .chapter__head { padding: clamp(1.5rem, 6vw, 3rem) 0 clamp(1.75rem, 5vw, 2.5rem); }
 .chapter__num { font-size: .75rem; letter-spacing: .22em; color: var(--accent); font-weight: 600; }
+/* 各話の始まりは、本の章の扉のように話数を大きく出す */
+.chapter__num--big {
+  font-family: var(--font-mincho); font-size: clamp(1.9rem, 8.5vw, 2.5rem);
+  letter-spacing: .18em; line-height: 1.3; animation: cover-in .8s ease-out both;
+}
+.chapter__time { margin-top: .9rem; font-size: .75rem; color: var(--ink-3); letter-spacing: .06em; }
 .chapter__title {
   margin: .7rem 0 0; font-family: var(--font-mincho); font-weight: 600;
   font-size: clamp(1.5rem, 6vw, 1.875rem); letter-spacing: .08em; line-height: 1.6;
 }
-.chapter__rule { width: 2.25rem; height: 2px; background: var(--line); margin-top: 1.5rem; }
+.chapter__rule { width: 2.25rem; height: 2px; background: var(--accent-raw); margin-top: 1.5rem; animation: cover-grow-x .7s .3s ease-out both; transform-origin: left; }
 
 .chapter__body {
   font-family: var(--font-body);
@@ -296,7 +325,7 @@ button { font: inherit; color: inherit; }
 .chapter__body p.noindent { text-indent: 0; }
 .chapter__body .break { height: 2.4em; display: flex; align-items: center; justify-content: center; }
 .chapter__body .break::before {
-  content: "＊　＊　＊"; font-size: .8em; letter-spacing: .3em; color: var(--ink-3);
+  content: "＊　＊　＊"; font-size: .8em; letter-spacing: .3em; color: var(--accent-raw);
   font-family: var(--font-ui);
 }
 
@@ -318,6 +347,30 @@ button { font: inherit; color: inherit; }
 }
 .fin__note { margin: 1rem 0 0; font-size: .8125rem; line-height: 2; color: var(--ink-3); }
 .fin__act { margin: 1.6rem 0 0; }
+
+/* 「了」が画面に入ったら、扉と同じように作品名がふわっと出て線が伸び、
+   作品の色の粒が舞う（reader.js が .is-in を付ける）。一度だけ動く */
+.fin { position: relative; isolation: isolate; }
+.fin__glow { position: relative; padding: .5rem 0 .25rem; }
+.fin__glow .cover__dust { left: 0; right: 0; }
+.fin__work {
+  margin: 1.1rem 0 0; font-family: var(--font-mincho); font-weight: 600;
+  font-size: clamp(1.25rem, 5.5vw, 1.5rem); letter-spacing: .08em; line-height: 1.6; color: var(--ink);
+}
+.fin__line { width: 3rem; height: 3px; border-radius: 2px; background: var(--accent-raw); margin: 1rem auto 0; transform-origin: center; }
+.fin__glow > *:not(.cover__dust):not(.fin__line), .fin__note { opacity: 0; }
+.fin__glow .fin__mark { font-size: 2rem; }
+.fin__line { transform: scaleX(0); }
+.fin.is-in .fin__mark { animation: fin-mark 1.1s ease-out both; }
+.fin.is-in .fin__work { animation: cover-in .9s .5s ease-out both; }
+.fin.is-in .fin__line { animation: cover-grow-x .8s .9s ease-out both; }
+.fin.is-in .fin__note { animation: cover-in .8s 1.2s ease-out both; }
+@keyframes fin-mark { from { opacity: 0; transform: scale(1.6); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .fin__glow > *:not(.cover__dust):not(.fin__line), .fin__note { opacity: 1; }
+  .fin__line { transform: none; }
+  .fin.is-in .fin__mark, .fin.is-in .fin__work, .fin.is-in .fin__line, .fin.is-in .fin__note { animation: none; }
+}
 
 /* 最終話の感想。各話の一行とちがい、枠で囲んではっきり見せる */
 .fin__ask {
@@ -384,7 +437,7 @@ button { font: inherit; color: inherit; }
 
 /* 縦組みでは操作列を画面の下に貼り付ける。
    面は画面いっぱいの高さなので、操作列はその下に常に見えている */
-[data-writing="vertical"] .chapter__nav {
+[data-paged="1"] .chapter__nav {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 55;
   margin: 0;
   padding: .6rem max(1.25rem, env(safe-area-inset-left))
@@ -394,7 +447,7 @@ button { font: inherit; color: inherit; }
   border-top: 1px solid var(--line);
 }
 /* ページめくりなので「先頭へ戻る」は使わない */
-[data-writing="vertical"] .to-top { display: none; }
+[data-paged="1"] .to-top { display: none; }
 
 /* 見出しは面のいちばん右の列になる。本文との間の空きは、行の幅の
    ちょうど何列ぶんかになるよう layoutPages が決める（ページの境目で
@@ -418,7 +471,10 @@ button { font: inherit; color: inherit; }
   width: 2px;
   height: 2.25rem;
   margin: 1.5rem 0 0;
+  animation-name: cover-grow-y;
+  transform-origin: top;
 }
+[data-writing="vertical"] .chapter__time { margin: 1.25rem 0 0; }
 
 [data-writing="vertical"] .chapter__body {
   height: 100%;
@@ -438,9 +494,9 @@ button { font: inherit; color: inherit; }
   width: calc(var(--read-size) * (var(--read-leading) - .35));
 }
 
-/* 縦組みのときだけ出す、ページ数とめくり方の案内 */
+/* ページめくりのときだけ出す、ページ数とめくり方の案内 */
 .pager { display: none; }
-[data-writing="vertical"] .pager {
+[data-paged="1"] .pager {
   display: flex; justify-content: space-between; align-items: center; gap: .75rem;
   margin-top: .4rem;
   font-size: .75rem;
@@ -448,13 +504,36 @@ button { font: inherit; color: inherit; }
   color: var(--ink-3);
   letter-spacing: .04em;
 }
-.pager__num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pager__num { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--accent); font-weight: 600; }
 .pager__hint a { color: var(--ink-3); text-decoration: underline; text-underline-offset: .2em; }
 
 /* 縦組みで最終話の「了」まで送ったとき、固定した操作列の裏に隠れないように。
    上で止めるときも、上の帯の裏に「了」が入らないよう少し下げる */
-[data-writing="vertical"] .chapter { padding-bottom: 6rem; }
+[data-paged="1"] .chapter { padding-bottom: 6rem; }
 .fin { scroll-margin-top: 4.5rem; }
+
+/* ---------- 横組みのページめくり ----------
+   本文を「段組み」にして1段を1ページにする。段は行の途中で切れないので、
+   ページの境目で文字が半分になることはない。並んだ段を横にずらして
+   1ページずつ見せる（ずらす量は reader.js の layoutPages が決める）。
+   縦組みと同じく、指でのスクロールはさせずスライドとタップで送る。 */
+.chapter__flow { display: contents; }
+[data-writing="horizontal"][data-paged="1"] .chapter__stage {
+  width: 100%; max-width: var(--wrap); margin: .75rem auto 0; padding: 0;
+  overflow: hidden;
+  touch-action: pinch-zoom;
+  -webkit-user-select: none;
+  user-select: none;
+  border-top: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--line-soft);
+}
+[data-writing="horizontal"][data-paged="1"] .chapter__flow {
+  display: block; height: 100%;
+  column-fill: auto;
+  padding: 1rem 0;
+  box-sizing: border-box;
+}
+[data-writing="horizontal"][data-paged="1"] .chapter__head { padding-top: .5rem; }
 
 /* ---------- めくるときの紙の影 ---------- */
 .chapter { position: relative; overflow-x: hidden; overflow-x: clip; }
@@ -477,15 +556,15 @@ button { font: inherit; color: inherit; }
 /* ---------- 全画面で読む ---------- */
 /* 上の帯と、縦組みの下に固定した操作列を隠して文字だけにする */
 [data-immersive="1"] .topbar { display: none; }
-[data-immersive="1"][data-writing="vertical"] .chapter__nav { display: none; }
-[data-immersive="1"][data-writing="vertical"] .chapter { padding-top: .5rem; padding-bottom: 1rem; }
+[data-immersive="1"][data-paged="1"] .chapter__nav { display: none; }
+[data-immersive="1"][data-paged="1"] .chapter { padding-top: .5rem; padding-bottom: 1rem; }
 
 /* ---------- 各話の終わりの感想（控えめ） ---------- */
 /* しつこくならないよう、灰色の小さな一行だけ。縦組みではページ数の横に出す */
 .ch-feedback { margin-top: 2.25rem; text-align: right; font-size: .8125rem; }
 .ch-feedback a { color: var(--ink-3); text-decoration: none; letter-spacing: .04em; }
 .ch-feedback a:hover { color: var(--accent); text-decoration: underline; }
-[data-writing="vertical"] .ch-feedback { display: none; }
+[data-paged="1"] .ch-feedback { display: none; }
 
 /* ---------- 設定パネル ---------- */
 .panel {
